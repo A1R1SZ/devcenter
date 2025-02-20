@@ -17,7 +17,7 @@ function App() {
           </Typography>
 
           <Typography>
-            Sign in as <Link href='#'>Guest</Link>
+            Sign in as <Link component={RouterLink} to='/homepage'>Guest</Link>
           </Typography>
 
           <Button sx={{ backgroundColor: 'darkgreen', color: 'white', marginTop: '10px', marginBottom: '10px', padding: '10px', width: 150 }}>Sign In</Button>
