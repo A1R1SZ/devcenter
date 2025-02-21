@@ -19,10 +19,8 @@ const Search = styled('div')(({ theme }) => ({
   '&:hover': {
     backgroundColor: alpha(theme.palette.common.white, 0.25),
   },
-  marginLeft: 0,
   width: '100%',
   [theme.breakpoints.up('sm')]: {
-    marginLeft: theme.spacing(1),
     width: 'auto',
   },
 }));
@@ -43,7 +41,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
   '& .MuiInputBase-input': {
     padding: theme.spacing(1, 1, 1, 0),
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-    width: '30ch',
+    width: '35ch',
   },
 }));
 
@@ -57,7 +55,7 @@ export default function NavBar() {
               edge="start"
               color="inherit"
               aria-label="open drawer"
-              sx={{ mr: 2 }}
+              sx={{ mr: 2, backgroundColor: '#555', borderRadius: '8px', transition: 'background-color 0.3s', '&:hover': { backgroundColor: '#777' }, '&:active': { backgroundColor: '#333' } }}
             >
               <MenuIcon />
             </IconButton>
@@ -71,7 +69,7 @@ export default function NavBar() {
               DevCenter
             </Typography>
   
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center',textAlign:'center' }}>
               <Search>
                 <SearchIconWrapper>
                   <SearchIcon />
@@ -84,44 +82,38 @@ export default function NavBar() {
             </Box>
             <IconButton
               size="large"
-              edge="start"
               color="inherit"
-              aria-label="open drawer"
-              sx={{ mr: 2 }}
+              aria-label="open notifications"
+              sx={{ backgroundColor: '#555', borderRadius: '8px', transition: 'background-color 0.3s', '&:hover': { backgroundColor: '#777' }, '&:active': { backgroundColor: '#333' }, ml: 2 }}
             >
-              <NotificationsIcon
-              />
+              <NotificationsIcon />
             </IconButton>
             <IconButton
               size="large"
-              edge="start"
               color="inherit"
-              aria-label="open drawer"
-              sx={{ mr: 2 }}
+              aria-label="open settings"
+              sx={{ backgroundColor: '#555', borderRadius: '8px', transition: 'background-color 0.3s', '&:hover': { backgroundColor: '#777' }, '&:active': { backgroundColor: '#333' }, ml: 1 }}
             >
-              <SettingsIcon
-              />
+              <SettingsIcon />
             </IconButton>
             <Typography
               variant="h6"
               noWrap
               component="div"
-              sx={{ color: 'white',paddingLeft:'15px',paddingRight:'30px' }}
+              sx={{ color: 'white', mx: 1 }}
             >
               USER
             </Typography>
             <IconButton
               size="large"
-              edge="start"
               color="inherit"
-              aria-label="open drawer"
-              sx={{ mr: 2 }}
+              aria-label="open profile"
+              sx={{ backgroundColor: '#555', borderRadius: '8px', transition: 'background-color 0.3s', '&:hover': { backgroundColor: '#777' }, '&:active': { backgroundColor: '#333' }, ml: 1 }}
             >
-              <PersonIcon
-              />
+              <PersonIcon />
             </IconButton>
           </Toolbar>
         </AppBar>
       </Box>
     );
-  }
+}
