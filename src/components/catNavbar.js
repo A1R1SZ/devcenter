@@ -24,6 +24,7 @@ export default function CatNavbar() {
           width: '50%',
           alignSelf: 'center',
           borderRadius: '20px',
+          marginTop:'25px'
         }}
       >
         <Tabs 
@@ -32,7 +33,7 @@ export default function CatNavbar() {
           variant="fullWidth" 
           centered
           TabIndicatorProps={{
-            style: { display: 'none' } // Hide the default underline indicator
+            style: { display: 'none' } 
           }}
         >
           <Tab 

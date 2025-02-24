@@ -1,30 +1,34 @@
 import './App.css';
-import CatNavbar from '../components/catNavbar';
 import DevContent from '../components/devContent';
-import { Box, Card, Typography } from '@mui/material';
+import { Avatar, Box, Card, Typography } from '@mui/material';
 import TopNavbar from '../components/topNavbar';
 
-function HomePage() {
+function ProfilePage() {
     return (
         <>
             <TopNavbar />
-            <CatNavbar />
-
-
-            <Typography
+            <Box
                 sx={{
                     position: 'fixed',
-                    left: '20px',
-                    top: '50%',
+                    left: '50px',
+                    top: '45%',
                     transform: 'translateY(-50%)',
-                    color: 'white',
-                    fontWeight: 600,
-                    fontSize: 30,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                 }}
             >
-                HOMEPAGE
-            </Typography>
-
+                <Avatar sx={{ width: 80, height: 80, mb: 1 }}>N</Avatar> 
+                <Typography
+                    sx={{
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: 30,
+                    }}
+                >
+                    @USERPROFILE
+                </Typography>
+            </Box>
             <Typography
                 sx={{
                     position: 'fixed',
@@ -38,7 +42,6 @@ function HomePage() {
             >
                 27 February 2025
             </Typography>
-
             <Box
                 sx={{
                     display: 'flex',
@@ -67,4 +70,4 @@ function HomePage() {
     );
 }
 
-export default HomePage;
+export default ProfilePage;
