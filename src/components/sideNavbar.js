@@ -20,7 +20,7 @@ const menuItems = [
 ];
 
 export default function SideNavbar({ open, toggleSideNavbar }) {
-  const location = useLocation(); // Get the current URL path
+  const location = useLocation();
 
   return (
     <Drawer open={open} onClose={toggleSideNavbar}>

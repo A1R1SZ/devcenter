@@ -14,6 +14,7 @@ export default function CatNavbar() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        marginBottom:'25px'
       }}
     >
       <AppBar

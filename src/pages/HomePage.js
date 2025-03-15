@@ -8,9 +8,6 @@ function HomePage() {
     return (
         <>
             <TopNavbar />
-            <CatNavbar />
-
-
             <Typography
                 sx={{
                     position: 'fixed',
@@ -45,22 +42,22 @@ function HomePage() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     width: '100%',
-                    mt: 2,
                 }}
             >
-                <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                    <Card
-                        sx={{
-                            backgroundColor: '#393636',
-                            padding: '25px',
-                            marginTop: '15px',
-                            width: '50%',
-                            borderTopLeftRadius: '15px',
-                            borderTopRightRadius: '15px',
-                        }}
-                    >
-                        <DevContent />
-                    </Card>
+              <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <Card
+                    sx={{
+                        backgroundColor: '#181818',
+                        padding: '20px',
+                        width: '55%',
+                        minHeight: '100vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
+                    <CatNavbar />
+                    <DevContent />
+                </Card>
                 </Box>
             </Box>
         </>

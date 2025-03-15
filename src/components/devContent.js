@@ -1,16 +1,51 @@
-import { Avatar, Box, Card, Container, Typography } from '@mui/material';
+import { Avatar, Box, Card, Container, Divider, TextField, Typography } from '@mui/material';
 import ImageIcon from '@mui/icons-material/Image';
 import * as React from 'react';
 
 export default function DevContent() {
     return (
-        <> <Card  sx={{ backgroundColor: 'orange', borderRadius: '0', padding: '20px' ,borderTopRightRadius:'15px',borderTopLeftRadius:'15px',width:'40%' }}>
-            <b>JAVA</b>
+        <>
+            <Card sx={{backgroundColor:'orange',borderRadius:0,padding:'5px',paddingLeft:'25px',width:'45%',borderTopRightRadius:'5px',borderTopLeftRadius:'5px'}}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>  
+                <Typography sx={{ color: 'black', fontWeight: 600, fontSize: 15 }}>
+                    Java
+                </Typography>
+                
+                <Divider
+                    orientation="vertical"
+                    flexItem
+                    sx={{
+                        backgroundColor: 'black',
+                        width: '1px',
+                        height: '40px',
+                        marginX: 2,
+                    }}
+                />
+
+                <Typography sx={{ fontWeight: 600, fontSize: 15 }}>
+                    Bugs
+                </Typography>
+
+                <Divider
+                    orientation="vertical"
+                    flexItem
+                    sx={{
+                        backgroundColor: 'black',
+                        width: '1px',
+                        height: '40px',
+                        marginX: 2,
+                    }}
+                />
+                
+                <Typography sx={{ fontWeight: 600, fontSize: 15 }}>
+                    @JavaDeveloper
+                </Typography>
+            </Box>
             </Card>
-            <Card sx={{ backgroundColor: '#2A2828', borderWidth: '5px', borderStyle: 'solid', borderColor: 'orange',borderRadius:'0px',borderTopRightRadius:'25px' }}>
-                <Card sx={{ backgroundColor: 'orange',padding:'15px',width:'30%',borderRadius:'0px',borderBottomRightRadius:'15px'}}>
+            <Card sx={{ backgroundColor: '#2A2828', borderWidth: '5px', borderStyle: 'solid', borderColor: 'orange' ,borderRadius:0}}>
+                {/* <Card sx={{ backgroundColor: 'orange',padding:'15px',width:'30%',borderRadius:'0px',borderBottomRightRadius:'15px'}}>
                     <b>@JAVA DEVELOPER TEAM</b>
-                </Card>
+                </Card> */}
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%',padding:'15px' }}>
                     <ImageIcon sx={{color:'white',fontSize:'100px'}}/>
                     <Container>
@@ -23,8 +58,8 @@ export default function DevContent() {
                     </Container>
                 </Box>
             </Card>
-            <Card sx={{ backgroundColor: 'orange', borderRadius: '0', padding: '25px' ,borderBottomRightRadius:'15px',borderBottomLeftRadius:'15px' }}>
-                {/* <TextField
+            {/* <Card sx={{ backgroundColor: 'orange', borderRadius: '0', padding: '25px' ,borderBottomRightRadius:'15px',borderBottomLeftRadius:'15px' }}>
+                <TextField
                     placeholder='Type your comment here...'
                     multiline
                     maxRows={4}
@@ -37,7 +72,7 @@ export default function DevContent() {
                         padding: '2.5px',
                         borderRadius: '10px'
                     }}
-                /> */}
+                />
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', marginTop: '10px' }}>
                     <Avatar>H</Avatar>
                     <Card sx={{ backgroundColor: '#2A2828', padding: '15px', borderRadius: '10px', marginLeft: '10px', flexGrow: 1 }}>
@@ -49,7 +84,7 @@ export default function DevContent() {
                         </Typography>
                     </Card>
                 </Box>
-            </Card>
+            </Card> */}
         </>
     );
 }

@@ -57,7 +57,7 @@ export default function TopNavbar() {
     <>
       <SideNavbar open={open} toggleSideNavbar={toggleSideNavbar} />
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static" sx={{ backgroundColor: '#393636', padding: '7.5px' }}>
+        <AppBar position="static" sx={{ backgroundColor: '#393636', padding: '7.5px'}}>
           <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <IconButton
               size="large"
@@ -90,7 +90,6 @@ export default function TopNavbar() {
                 <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
               </Search>
             </Box>
-
             <IconButton size="large" color="inherit" aria-label="open notifications" sx={{ ml: 2 }}>
               <NotificationsIcon />
             </IconButton>
