@@ -1,107 +1,59 @@
 import React, { useState } from 'react';
-import { styled, alpha } from '@mui/material/styles';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import InputBase from '@mui/material/InputBase';
+import { AppBar, Box, Toolbar, IconButton, Typography } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import SearchIcon from '@mui/icons-material/Search';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import SettingsIcon from '@mui/icons-material/Settings';
 import PersonIcon from '@mui/icons-material/Person';
 import SideNavbar from './sideNavbar';
-
-const Search = styled('div')(({ theme }) => ({
-  position: 'relative',
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
-  '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
-  },
-  width: '100%',
-  [theme.breakpoints.up('sm')]: {
-    width: 'auto',
-  },
-}));
-
-const SearchIconWrapper = styled('div')(({ theme }) => ({
-  padding: theme.spacing(0, 2),
-  height: '100%',
-  position: 'absolute',
-  pointerEvents: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-}));
-
-const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: 'white',
-  width: '100%',
-  '& .MuiInputBase-input': {
-    padding: theme.spacing(1, 1, 1, 0),
-    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-    width: '35ch',
-  },
-}));
+import Searchbar from './searchbar';
+import CreateContentButton from './createContentButton';
 
 export default function TopNavbar() {
   const [open, setOpen] = useState(false);
 
-  const toggleSideNavbar = () => {
-    setOpen((prev) => !prev);
-  };
+  const toggleSideNavbar = () => setOpen((prev) => !prev);
 
   return (
     <>
       <SideNavbar open={open} toggleSideNavbar={toggleSideNavbar} />
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static" sx={{ backgroundColor: '#393636', padding: '7.5px'}}>
+        <AppBar position="static" sx={{ backgroundColor: '#393636', p: '7.5px' }}>
           <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <IconButton
               size="large"
               edge="start"
               color="inherit"
               aria-label="open drawer"
+              onClick={toggleSideNavbar}
               sx={{
-                // position: 'fixed',
                 mr: 2,
                 backgroundColor: '#555',
                 borderRadius: '8px',
-                transition: 'background-color 0.3s',
+                transition: '0.3s',
                 '&:hover': { backgroundColor: '#777' },
                 '&:active': { backgroundColor: '#333' },
               }}
-              onClick={toggleSideNavbar}
             >
               <MenuIcon />
             </IconButton>
 
-            <Typography variant="h6" noWrap component="div" sx={{ color: 'white',fontWeight:600 }}>
+            <Typography variant="h6" noWrap sx={{ color: 'white', fontWeight: 600 }}>
               DEVCENTER
             </Typography>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', textAlign: 'center',borderRadius:'25px' }}>
-              <Search sx={{borderRadius:'10px'}}>
-                <SearchIconWrapper>
-                  <SearchIcon />
-                </SearchIconWrapper>
-                <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
-              </Search>
+            <Searchbar />
+            <CreateContentButton />
+
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <IconButton size="large" color="inherit" sx={{ ml: 2 }}>
+                <NotificationsIcon />
+              </IconButton>
+              <Typography variant="h6" noWrap sx={{ color: 'white', mx: 1 }}>
+                USER
+              </Typography>
+              <IconButton size="large" color="inherit" sx={{ ml: 1 }}>
+                <PersonIcon />
+              </IconButton>
             </Box>
-            <IconButton size="large" color="inherit" aria-label="open notifications" sx={{ ml: 2 }}>
-              <NotificationsIcon />
-            </IconButton>
-            <IconButton size="large" color="inherit" aria-label="open settings" sx={{ ml: 1 }}>
-              <SettingsIcon />
-            </IconButton>
-            <Typography variant="h6" noWrap component="div" sx={{ color: 'white', mx: 1 }}>
-              USER
-            </Typography>
-            <IconButton size="large" color="inherit" aria-label="open profile" sx={{ ml: 1 }}>
-              <PersonIcon />
-            </IconButton>
           </Toolbar>
         </AppBar>
       </Box>
