@@ -8,15 +8,12 @@ import {
   Stack,
   Snackbar,
   Typography,
-
-  Switch,
-
 } from "@mui/material";
 import { usePostContext } from "../data/contextData";
 import { resourceName, resourceType } from "../data/generalData";
 
 
-export default function CreateContentButton() {
+export default function CreateDocumentationButton() {
 
   const [postType,setPostType] = useState(null);
   const [selectedResourceType,setResourceType] = useState(null);
@@ -36,6 +33,8 @@ export default function CreateContentButton() {
 
 
   const [open, setOpen] = useState(false);
+  const [stepModalOpen, setStepModalOpen] = useState(false);
+  const [resouceExistance, setResourceExistance] = useState(null);
 
   
   const [formData, setFormData] = useState({
@@ -66,6 +65,7 @@ export default function CreateContentButton() {
       imageName: "",
       imagePreview: "",
     });
+    setResourceExistance(null);
   };
 
   const handleImageChange = (e) => {
@@ -112,13 +112,6 @@ export default function CreateContentButton() {
     createButtonRef.current.focus();
   };
 
-  const handleChangePostType = (e) => {
-    const isChecked = e.target.checked; // Corrected to use 'checked'
-    setPostType(isChecked ? "Content Creator" : "News");
-    console.log("Post Type:", isChecked ? "Content Creator" : "News");
-  };
-  
-
 
   return (
     <>
@@ -140,7 +133,7 @@ export default function CreateContentButton() {
             px: 2,
           },
         }}
-        message="Post created successfully!"
+        message="Documentation created successfully!"
         action={
           <Button
             variant="outlined"
@@ -157,14 +150,76 @@ export default function CreateContentButton() {
         }
       />
 
+      {/* ✅ STEP MODAL */}
+      <Modal
+        open={stepModalOpen}
+        onClose={() => setStepModalOpen(false)}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1300,
+        }}
+      >
+        <Box
+          sx={{
+            bgcolor: "#2c2c2c",
+            color: "white",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 4,
+            width: "550px",
+            textAlign: "center",
+          }}
+        >
+          <Typography variant="h6" mb={2}>
+            Create documentation for a new or existing resource type?
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              fullWidth
+              sx={{
+                color: "#ffffff",
+                borderColor: "#90caf9",
+                "&:hover": { borderColor: "#64b5f6" },
+              }}
+              onClick={() => {
+                setResourceExistance(false);
+                setStepModalOpen(false);
+                setOpen(true);
+              }}
+            >
+              New Resource
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              sx={{
+                color: "#ffffff",
+                borderColor: "#90caf9",
+                "&:hover": { borderColor: "#64b5f6" },
+              }}
+              onClick={() => {
+                setResourceExistance(true);
+                setStepModalOpen(false);
+                setOpen(true);
+              }}
+            >
+              Existing Resource
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
+
       {/* ✅ MAIN BUTTON */}
       <Button
         ref={createButtonRef}
         sx={{ backgroundColor: "white", color: "black" }}
+        onClick={() => setStepModalOpen(true)}
         aria-label="Create a new post"
-        onClick={() => setOpen(true)}
       >
-        Create Post
+        Create Documentation
       </Button>
 
       {/* ✅ DOCUMENTATION MODAL */}
@@ -189,13 +244,10 @@ export default function CreateContentButton() {
           }}
         >
           <h2 style={{ marginBottom: "16px" }}>
-            Create Post
+            Create Documentation{" "}
+            {resouceExistance ? "(Existing Resource)" : "(New Resource)"}
           </h2>
-          <Box sx={{ width: "50%", display: "flex", alignItems: "center" }}>
-            <Typography sx={{ mr: 2 }}>News</Typography>
-            <Switch value={postType} onChange={handleChangePostType}/>
-            <Typography sx={{ ml: 2 }}>Content Creator</Typography>
-          </Box>
+
           {/* RESOURCE TYPE */}
           <Autocomplete
           options={resourceType}
@@ -209,7 +261,7 @@ export default function CreateContentButton() {
           renderInput={(params) => (
               <TextField
               {...params}
-              label="Content Type"
+              label="Resource Type"
               variant="outlined"
               sx={{
                   backgroundColor: "#393636",
@@ -230,7 +282,7 @@ export default function CreateContentButton() {
           />
 
           {/* RESOURCE NAME */}
-              <Autocomplete
+          {resouceExistance && (<Autocomplete
               options={resourceDataName}
               value={selectedResourceName}
               onChange={(event, newValue) => {
@@ -242,7 +294,7 @@ export default function CreateContentButton() {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Content Name"
+                  label="Resource Name"
                   variant="outlined"
                   sx={{
                     backgroundColor: selectedResourceType ? "#393636" : "#2e2e2e",
@@ -258,7 +310,29 @@ export default function CreateContentButton() {
                 backgroundColor: "#393636",
                 flex: 1,
               }}
-            />
+            />)}
+          {!resouceExistance && (
+            <TextField
+            disabled={!selectedResourceType}
+            value={selectedResourceName}
+            onChange={(event) => {
+              console.log("Name Written:", event.target.value);
+              setResourceName(event.target.value);
+            }}
+            label="Resource Name"
+            variant="outlined"
+            sx={{
+              flex: 1,
+              width: "100%",
+              mb:2,
+              backgroundColor: selectedResourceType ? "#393636" : "#2e2e2e",
+              borderRadius: "5px",
+              "& .MuiInputBase-input": { color: "white" },
+              "& .MuiInputLabel-root": { color: "whitesmoke" },
+              "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+            }}
+          />
+          )}
           <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
             {/* LEFT SIDE FORM */}
             <Box flex={1}>
@@ -270,7 +344,7 @@ export default function CreateContentButton() {
                 console.log("Tags Written:", event.target.value);
                 setResourceVersion(event.target.value);
               }}
-              label="Content Version"
+              label="Resource Version"
               variant="outlined"
               sx={{
                 flex: 1,
@@ -292,7 +366,7 @@ export default function CreateContentButton() {
                 console.log("Title Written:", event.target.value);
                 setNewResourceTitle(event.target.value);
               }}
-              label="Content Title"
+              label="Resource Title"
               variant="outlined"
               sx={{
                 flex: 1,
@@ -314,7 +388,7 @@ export default function CreateContentButton() {
                 console.log("Content Written:", event.target.value);
                 setNewResourceContent(event.target.value);
               }}
-              label="Content Content"
+              label="Resource Content"
               variant="outlined"
               sx={{
                 flex: 1,
@@ -345,6 +419,7 @@ export default function CreateContentButton() {
             </Box>
 
             {/* RIGHT SIDE IMAGE UPLOAD */}
+            {!resouceExistance &&( 
               <Box
               flex={1}
               onDrop={handleDragDrop}
@@ -366,7 +441,7 @@ export default function CreateContentButton() {
               ) : (
                 <>
                   <Typography variant="body1" gutterBottom>
-                  {newResourceTitle?"Drag & Drop a Content Logo here or":"Fill in Content Title to unlock"}
+                    {newResourceTitle?"Drag & Drop a Resource Logo here or":"Fill in Resource Title to unlock"}
                   </Typography>
                   {newResourceTitle &&(
                     <Button
@@ -392,6 +467,8 @@ export default function CreateContentButton() {
                 onChange={handleImageChange}
               />
             </Box>
+            )}
+
           </Stack>
         </Box>
       </Modal>
