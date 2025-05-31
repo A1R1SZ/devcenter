@@ -46,8 +46,8 @@ export default function CatNavbar() {
           centered
           TabIndicatorProps={{ style: { display: 'none' } }}
         >
-          <Tab label="News" sx={tabStyles(0)} />
-          <Tab label="Content Creator" sx={tabStyles(1)} />
+          <Tab label="Main Creator Content" sx={tabStyles(0)} />
+          <Tab label="Side Creator Content" sx={tabStyles(1)} />
         </Tabs>
       </AppBar>
     </Box>

@@ -1,35 +1,142 @@
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import TopNavbar from "../components/topNavbar";
-import { Box, Card, Typography, Autocomplete, TextField, Button, Stack, Modal, TextareaAutosize } from "@mui/material";
-import { languageColors } from "../data/languageData"; // Import data
+import { Box, Card, Typography, Autocomplete, TextField, Button, Stack, Modal, TextareaAutosize, Chip } from "@mui/material";
+import { languageColors } from "../data/languageData";
 import { resourceName, resourceType, resourceVersion } from "../data/generalData";
+import axios from "axios";
+import { UserContext } from "../contexts/UserContext";
 
 export default function TagsPage() {
-  const [selectedResourceType,setResourceType] = useState(null);
-  const [selectedResourceName,setResourceName] = useState(null)
-  const [selectedResourceVersion,setResourceVersion] = useState(null);
+  const [selectedResourceType, setResourceType] = useState(null);
+  const [selectedResourceName, setResourceName] = useState(null);
+  const [selectedResourceVersion, setResourceVersion] = useState(null);
 
-  const [isHidden, setIsHidden] = useState(false);
-  //ProgrammeSetup
-  const resourceDataName =
-  selectedResourceType === "Language"
-    ? resourceName[0] || []
-    : selectedResourceType === "Tools" || selectedResourceType === "Package"
-    ? resourceName[1] || []
-    : [];
-  
-    const resourceDataVersion =
-    selectedResourceType === "Language" && selectedResourceName
-      ? resourceVersion[0][selectedResourceName] || []
-      : [];
-  
-  // Modal states
+  const [resourceNameOptions, setResourceNameOptions] = useState([]);
+  const [resourceVersionOptions, setResourceVersionOptions] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+
+  const { token } = useContext(UserContext);
+
+  useEffect(() => {
+    if (selectedResourceType) {
+      setResourceName(null);
+      setResourceVersion(null);
+      axios.get("http://localhost:5000/documentation/names", {
+        params: { resourceType: selectedResourceType }
+      })
+      .then(res => setResourceNameOptions(res.data))
+      .catch(err => console.error("Failed to fetch names:", err));
+    }
+  }, [selectedResourceType]);
+
+  useEffect(() => {
+    if (selectedResourceType && selectedResourceName) {
+      setResourceVersion(null);
+      axios.get("http://localhost:5000/documentation/versions", {
+        params: {
+          resourceType: selectedResourceType,
+          resourceName: selectedResourceName
+        }
+      })
+      .then(res => setResourceVersionOptions(res.data))
+      .catch(err => console.error("Failed to fetch versions:", err));
+    }
+  }, [selectedResourceName]);
+
+  useEffect(() => {
+    if (selectedResourceName && selectedResourceVersion) {
+      axios.get("http://localhost:5000/tag-filter", {
+        params: {
+          resourceName: selectedResourceName,
+          resourceVersion: selectedResourceVersion,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      .then(res => {
+        setTags(res.data);
+      })
+      .catch(err => {
+        console.error("Failed to fetch tags:", err);
+      });
+    }
+  }, [selectedResourceName, selectedResourceVersion]);
+
+  const [isHidden, setIsHidden] = useState(false);                 
+
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [content, setContent] = useState("'Paste here'");
+  const [content, setContent] = useState(tags);
   const [editedContent, setEditedContent] = useState(content);
 
-  // Modal styles
+  const handleDeleteTags = async () => {
+    if (selectedTags.length === 0) return;
+
+    try {
+      const response = await axios.delete("http://localhost:5000/delete-tag", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        data: {
+          selectedResources: selectedResourceName,
+          selectedVersion: selectedResourceVersion,
+          tagsToDelete: selectedTags
+        }
+      });
+
+      console.log("Deleted:", response.data);
+      
+      // Refresh tag list
+      setTags(prevTags => prevTags.filter(tag => !selectedTags.includes(tag.resource_tag_name)));
+      setSelectedTags([]);
+      setOpenDeleteModal(false);
+
+    } catch (err) {
+      console.error("Failed to delete tags:", err);
+    }
+  };
+
+  const handleEditTag = async () => {
+    if (selectedTags.length !== 1 || !editedContent.trim()) return;
+
+    const oldName = selectedTags[0];
+    const newName = editedContent.trim();
+
+    try {
+      const response = await axios.put("http://localhost:5000/edit-tag", {
+        selectedResources: selectedResourceName,
+        selectedVersion: selectedResourceVersion,
+        tagsToEdit: [{ oldName, newName }]
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      console.log("Tag updated:", response.data);
+
+      // Update UI
+      setTags(prev =>
+        prev.map(tag =>
+          tag.resource_tag_name === oldName
+            ? { ...tag, resource_tag_name: newName }
+            : tag
+        )
+      );
+      setSelectedTags([newName]);
+      setContent(newName);
+      setEditedContent(newName);
+      setOpenEditModal(false);
+    } catch (err) {
+      console.error("Failed to update tag:", err);
+    }
+  };
+
+
   const modalStyle = {
     position: "absolute",
     top: "50%",
@@ -61,33 +168,32 @@ export default function TagsPage() {
       </Typography>
       <Box sx={{ display: "flex", justifyContent: "center", width: "80%", marginLeft: "20%", paddingTop: "20px", backgroundColor: "#181818", minHeight: '90vh' }}>
         <Box sx={{ width: "95%" }}>
-          {/* Language and Version Selectors */}
           <Autocomplete
             options={resourceType}
             value={selectedResourceType}
             onChange={(e, value) => setResourceType(value)}
             renderInput={(params) => (
-                <TextField
+              <TextField
                 {...params}
                 label="Resource Type"
                 variant="filled"
-                />
+              />
             )}
             sx={{
-                mb: 2,
-                bgcolor: "#393636",
-                "& .MuiInputBase-input": { color: "white" },
-                "& .MuiInputLabel-root": { color: "whitesmoke" },
-                "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+              mb: 2,
+              bgcolor: "#393636",
+              "& .MuiInputBase-input": { color: "white" },
+              "& .MuiInputLabel-root": { color: "whitesmoke" },
+              "& .MuiInputLabel-root.Mui-focused": { color: "white" },
             }}
-            />
+          />
           <Box sx={{ display: "flex", gap: "10px", marginBottom: "10px", marginTop: '25px' }}>
             <Autocomplete
-              options={resourceDataName}
+              options={resourceNameOptions}
               value={selectedResourceName}
               onChange={(event, newValue) => {
                 setResourceName(newValue);
-                console.log("Selected Name:",newValue);
+                console.log("Selected Name:", newValue);
               }}
               renderInput={(params) => (
                 <TextField
@@ -103,14 +209,10 @@ export default function TagsPage() {
                   }}
                 />
               )}
-              sx={{
-                backgroundColor: "#393636",
-                flex: 1,
-              }}
+              sx={{ backgroundColor: "#393636", flex: 1 }}
             />
-
             <Autocomplete
-              options={resourceDataVersion || []}
+              options={resourceVersionOptions || []}
               value={selectedResourceVersion}
               onChange={(event, newValue) => {
                 console.log("Selected Version:", newValue);
@@ -131,12 +233,8 @@ export default function TagsPage() {
                   }}
                 />
               )}
-              sx={{
-                backgroundColor: "#393636",
-                flex: 1,
-              }}
+              sx={{ backgroundColor: "#393636", flex: 1 }}
             />
-
           </Box>
 
           <Card
@@ -161,7 +259,6 @@ export default function TagsPage() {
                 >
                   {selectedResourceName || "Select Resources"}
                 </Typography>
-
                 {selectedResourceVersion && (
                   <Typography
                     sx={{
@@ -176,41 +273,77 @@ export default function TagsPage() {
                   </Typography>
                 )}
               </Box>
-
               {selectedResourceName && selectedResourceVersion && (
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    sx={{ color: "white", borderColor: "#64b5f6", "&:hover": { borderColor: "#42a5f5" } }}
-                    onClick={() => { setEditedContent(content); setOpenEditModal(true); }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    sx={{ color: "white", borderColor: "#ef5350", "&:hover": { borderColor: "#e53935" } }}
-                    onClick={() => setOpenDeleteModal(true)}
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setIsHidden(!isHidden)}
-                    sx={{ color: "white", borderColor: "#ffa726", "&:hover": { borderColor: "#fb8c00" } }}
-                  >
-                    {isHidden ? "Show" : "Hide"}
-                  </Button>
-                </Stack>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    color: selectedTags.length === 1 ? "white" : "gray",
+                    borderColor: selectedTags.length === 1 ? "#64b5f6" : "#555",
+                    "&:hover": { borderColor: selectedTags.length === 1 ? "#42a5f5" : "#555" }
+                  }}
+                  disabled={selectedTags.length !== 1}
+                  onClick={() => {
+                    if (selectedTags.length === 1) {
+                      const currentTag = selectedTags[0];
+                      setEditedContent(currentTag);
+                      setContent(currentTag);
+                      setOpenEditModal(true);
+                    }
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{ color: "white", borderColor: "#ef5350", "&:hover": { borderColor: "#e53935" } }}
+                  onClick={() => setOpenDeleteModal(true)}
+                >
+                  Delete
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setIsHidden(!isHidden)}
+                  sx={{ color: "white", borderColor: "#ffa726", "&:hover": { borderColor: "#fb8c00" } }}
+                >
+                  {isHidden ? "Show" : "Hide"}
+                </Button>
+              </Stack>
               )}
             </Box>
 
             {!isHidden && (
               <Card sx={{ backgroundColor: '#2A2828', color: 'white', padding: '20px', marginTop: '20px' }}>
-                {content}
+                {tags.map((tag, index) => {
+                  const isSelected = selectedTags.includes(tag.resource_tag_name);
+                  return (
+                    <Chip
+                      key={index}
+                      label={tag.resource_tag_name}
+                      onClick={() => {
+                        const newSelectedTags = isSelected
+                          ? selectedTags.filter(t => t !== tag.resource_tag_name)
+                          : [...selectedTags, tag.resource_tag_name];
+                        
+                        console.log("Selected Tags:", newSelectedTags); // ✅ Debugging log
+                        setSelectedTags(newSelectedTags);
+                      }}
+                      sx={{
+                        mr: 1,
+                        mb: 1,
+                        backgroundColor: isSelected ? "#1e88e5" : "#64b5f6",
+                        color: "white",
+                        cursor: "pointer",
+                        border: isSelected ? "2px solid white" : "none"
+                      }}
+                    />
+                  );
+                })}
               </Card>
+
             )}
           </Card>
         </Box>
@@ -238,7 +371,7 @@ export default function TagsPage() {
             <Button
               variant="contained"
               size="small"
-              onClick={() => { setContent(editedContent); setOpenEditModal(false); }}
+              onClick={handleEditTag}
               sx={{ backgroundColor: "#64b5f6" }}
             >
               Save
@@ -264,8 +397,8 @@ export default function TagsPage() {
             <Button
               variant="contained"
               size="small"
-              color="error"
-              onClick={() => { setContent("'Paste here'"); setOpenDeleteModal(false); }}
+              onClick={handleDeleteTags}
+              sx={{ backgroundColor: "#ef5350" }}
             >
               Delete
             </Button>

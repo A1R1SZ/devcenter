@@ -1,28 +1,126 @@
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import TopNavbar from "../components/topNavbar";
 import { Box, Card, Typography, Autocomplete, TextField, Button, Stack, Modal, TextareaAutosize } from "@mui/material";
 import { languageColors } from "../data/languageData"; // Import data
-import { resourceName, resourceType, resourceVersion } from "../data/generalData";
+import { resourceName, resourceType } from "../data/generalData";
+import axios from "axios";
+import DOMPurify from 'dompurify';
+import { UserContext } from "../contexts/UserContext";
+
 
 function DocumentationPage() {
   const [selectedResourceType,setResourceType] = useState(null);
   const [selectedResourceName,setResourceName] = useState(null)
   const [selectedResourceVersion,setResourceVersion] = useState(null);
 
+  const [resourceNameOptions, setResourceNameOptions] = useState([]);
+  const [resourceVersionOptions, setResourceVersionOptions] = useState([]);
+  
+  const [documentationData, setDocumentationData] = useState([]);
+
+  const { token } = useContext(UserContext);
+
+  const handleDelete = async () => {
+    try {
+      const response = await axios.delete("http://localhost:5000/delete-documentation", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          resourceName: selectedResourceName,
+          resourceVersion: selectedResourceVersion
+        }
+      });
+  
+      if (response.status === 200) {
+        alert("Documentation deleted successfully!");
+        setOpenDeleteModal(false);
+        setDocumentationData([]);
+        setResourceVersion(null);
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Failed to delete documentation.");
+    }
+  };
+  
+  const handleSave = async () => {
+    try {
+      const response = await axios.put("http://localhost:5000/edit-documentation", {
+        resourceContent: editedContent,
+        resourceName: selectedResourceName,
+        resourceVersion: selectedResourceVersion,
+
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (response.status === 200) {
+        alert("Content saved successfully!");
+        setOpenEditModal(false);
+        // Optionally refresh documentation data
+        setDocumentationData((prev) => prev.map(doc => ({
+          ...doc,
+          resource_content: editedContent
+        })));
+      }
+    } catch (error) {
+      console.error("Error saving content:", error);
+      alert("Failed to save content.");
+    }
+  };
+
+  useEffect(() => {
+    if (selectedResourceType) {
+      setResourceName(null);
+      setResourceVersion(null);
+      axios.get("http://localhost:5000/documentation/names", {
+        params: { resourceType: selectedResourceType }
+      })
+      .then(res => setResourceNameOptions(res.data))
+      .catch(err => console.error("Failed to fetch names:", err));
+    }
+  }, [selectedResourceType]);
+
+  useEffect(() => {
+    if (selectedResourceType && selectedResourceName) {
+      setResourceVersion(null);
+      axios.get("http://localhost:5000/documentation/versions", {
+        params: {
+          resourceType: selectedResourceType,
+          resourceName: selectedResourceName
+        }
+      })
+      .then(res => setResourceVersionOptions(res.data))
+      .catch(err => console.error("Failed to fetch versions:", err));
+    }
+  }, [selectedResourceName]);
+
+  useEffect(() => {
+    if (selectedResourceType && selectedResourceName && selectedResourceVersion) {
+      axios.get("http://localhost:5000/documentation/filter", {
+        params: {
+          resourceType: selectedResourceType,
+          resourceName: selectedResourceName,
+          resourceVersion: selectedResourceVersion
+        }
+      })
+      .then((res) => {
+        console.log("Fetched data:", res.data); 
+        setDocumentationData(res.data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch documentation:", err);
+      });
+    }
+  }, [selectedResourceType, selectedResourceName, selectedResourceVersion]);
+  
+  
+
   const [isHidden, setIsHidden] = useState(false);
-  //ProgrammeSetup
-  const resourceDataName =
-  selectedResourceType === "Language"
-    ? resourceName[0] || []
-    : selectedResourceType === "Tools" || selectedResourceType === "Package"
-    ? resourceName[1] || []
-    : [];
-  
-    const resourceDataVersion =
-    selectedResourceType === "Language" && selectedResourceName
-      ? resourceVersion[0][selectedResourceName] || []
-      : [];
-  
   // Modal states
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -30,7 +128,7 @@ function DocumentationPage() {
   const [editedContent, setEditedContent] = useState(content);
 
   // Modal styles
-  const modalStyle = {
+  const modalDeleteStyle = {
     position: "absolute",
     top: "50%",
     left: "50%",
@@ -40,6 +138,20 @@ function DocumentationPage() {
     borderRadius: "8px",
     color: "white",
     width: 400,
+    boxShadow: 24,
+  };
+
+  const modalEditStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    backgroundColor: "#393636",
+    padding: "20px",
+    borderRadius: "8px",
+    color: "white",
+    width: 400,
+    height:500,
     boxShadow: 24,
   };
 
@@ -83,7 +195,7 @@ function DocumentationPage() {
             />
           <Box sx={{ display: "flex", gap: "10px", marginBottom: "10px", marginTop: '25px' }}>
             <Autocomplete
-              options={resourceDataName}
+              options={resourceNameOptions}
               value={selectedResourceName}
               onChange={(event, newValue) => {
                 setResourceName(newValue);
@@ -110,7 +222,7 @@ function DocumentationPage() {
             />
 
             <Autocomplete
-              options={resourceDataVersion || []}
+              options={resourceVersionOptions}
               value={selectedResourceVersion}
               onChange={(event, newValue) => {
                 console.log("Selected Version:", newValue);
@@ -182,26 +294,24 @@ function DocumentationPage() {
                   <Button
                     variant="outlined"
                     size="small"
-                    sx={{ color: "white", borderColor: "#64b5f6", "&:hover": { borderColor: "#42a5f5" } }}
-                    onClick={() => { setEditedContent(content); setOpenEditModal(true); }}
+                    sx={{ color: "white", borderColor: "#64b5f6", "&:hover": { backgroundColor: "#42a5f5" } }}
+                    onClick={() => {
+                      // Get the first documentation content (assuming one result per version)
+                      const docContent = documentationData[0]?.resource_content || "";
+                      setContent(docContent);
+                      setEditedContent(docContent);
+                      setOpenEditModal(true);
+                    }}
                   >
                     Edit
                   </Button>
                   <Button
                     variant="outlined"
                     size="small"
-                    sx={{ color: "white", borderColor: "#ef5350", "&:hover": { borderColor: "#e53935" } }}
+                    sx={{ color: "white", borderColor: "#ef5350", "&:hover": { backgroundColor: "#e53935" } }}
                     onClick={() => setOpenDeleteModal(true)}
                   >
                     Delete
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setIsHidden(!isHidden)}
-                    sx={{ color: "white", borderColor: "#ffa726", "&:hover": { borderColor: "#fb8c00" } }}
-                  >
-                    {isHidden ? "Show" : "Hide"}
                   </Button>
                 </Stack>
               )}
@@ -209,7 +319,16 @@ function DocumentationPage() {
 
             {!isHidden && (
               <Card sx={{ backgroundColor: '#2A2828', color: 'white', padding: '20px', marginTop: '20px' }}>
-                {content}
+                {documentationData.map((doc) => (
+                  <Card key={doc.id} sx={{ mb: 2, p: 2, bgcolor: "#282828", color: "white" }}>
+                    <Typography
+                      sx={{ mt: 1 }}
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(doc.resource_content),
+                      }}
+                    />
+                  </Card>
+                ))}
               </Card>
             )}
           </Card>
@@ -218,11 +337,28 @@ function DocumentationPage() {
 
       {/* Edit Modal */}
       <Modal open={openEditModal} onClose={() => setOpenEditModal(false)}>
-        <Box sx={modalStyle}>
-          <Typography variant="h6" sx={{ marginBottom: '10px' }}>Edit Content</Typography>
-          <TextareaAutosize
-            minRows={5}
-            style={{ width: '100%', padding: '10px', background: '#2e2e2e', color: 'white', border: '1px solid #555' }}
+        <Box sx={modalEditStyle}>
+          <Typography variant="h6" sx={{ marginBottom: '10px' }}>Edit {selectedResourceName} version {selectedResourceVersion}</Typography>
+          <TextField
+            multiline
+            minRows={10}
+            fullWidth
+            variant="outlined"
+            sx={{
+              backgroundColor: "#2e2e2e",
+              "& .MuiOutlinedInput-root": {
+                color: "white",
+                "& fieldset": { borderColor: "#555" },
+                "&:hover fieldset": { borderColor: "#888" },
+                "&.Mui-focused fieldset": { borderColor: "#64b5f6" },
+                "& input": {
+                  color: "white",
+                },
+                "& textarea": {
+                  color: "white",
+                },
+              },
+            }}
             value={editedContent}
             onChange={(e) => setEditedContent(e.target.value)}
           />
@@ -238,7 +374,7 @@ function DocumentationPage() {
             <Button
               variant="contained"
               size="small"
-              onClick={() => { setContent(editedContent); setOpenEditModal(false); }}
+              onClick={handleSave}
               sx={{ backgroundColor: "#64b5f6" }}
             >
               Save
@@ -249,7 +385,7 @@ function DocumentationPage() {
 
       {/* Delete Modal */}
       <Modal open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
-        <Box sx={modalStyle}>
+        <Box sx={modalDeleteStyle}>
           <Typography variant="h6" sx={{ marginBottom: '10px' }}>Confirm Delete</Typography>
           <Typography sx={{ marginBottom: '20px' }}>Are you sure you want to delete the content?</Typography>
           <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
@@ -265,7 +401,7 @@ function DocumentationPage() {
               variant="contained"
               size="small"
               color="error"
-              onClick={() => { setContent("'Paste here'"); setOpenDeleteModal(false); }}
+              onClick={handleDelete}
             >
               Delete
             </Button>

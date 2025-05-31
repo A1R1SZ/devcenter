@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   Button,
   Modal,
@@ -10,6 +10,8 @@ import {
 } from "@mui/material";
 import { usePostContext } from "../data/contextData";
 import { resourceName, resourceType, resourceVersion } from "../data/generalData";
+import axios from "axios";
+import { UserContext } from "../contexts/UserContext";
 
 export default function CreateTagsButton() {
     const [open, setOpen] = useState(false);
@@ -19,19 +21,36 @@ export default function CreateTagsButton() {
     const [selectedResourceVersion,setResourceVersion] = useState(null);
     const [newTags, setNewTags] = useState("");
 
+    const [resourceNameOptions, setResourceNameOptions] = useState([]);
+    const [resourceVersionOptions, setResourceVersionOptions] = useState([]);
 
-    const resourceDataName =
-    selectedResourceType === "Language"
-    ? resourceName[0] || []
-    : selectedResourceType === "Tools" || selectedResourceType === "Package"
-    ? resourceName[1] || []
-    : [];
-    
-    const resourceDataVersion =
-    selectedResourceType === "Language" && selectedResourceName
-        ? resourceVersion[0][selectedResourceName] || []
-        : [];
-      
+    const { token } = useContext(UserContext);
+
+    useEffect(() => {
+      if (selectedResourceType) {
+        setResourceName(null);
+        setResourceVersion(null);
+        axios.get("http://localhost:5000/documentation/names", {
+          params: { resourceType: selectedResourceType }
+        })
+        .then(res => setResourceNameOptions(res.data))
+        .catch(err => console.error("Failed to fetch names:", err));
+      }
+    }, [selectedResourceType]);
+  
+    useEffect(() => {
+      if (selectedResourceType && selectedResourceName) {
+        setResourceVersion(null);
+        axios.get("http://localhost:5000/documentation/versions", {
+          params: {
+            resourceType: selectedResourceType,
+            resourceName: selectedResourceName
+          }
+        })
+        .then(res => setResourceVersionOptions(res.data))
+        .catch(err => console.error("Failed to fetch versions:", err));
+      }
+    }, [selectedResourceName]);
 
   const [formData, setFormData] = useState({
     resourceType: selectedResourceType,
@@ -62,21 +81,33 @@ export default function CreateTagsButton() {
     console.log("ResetForm:",formData);
   };
 
-const handlePost = () => {
-  const updatedFormData = {
-    resourceType: selectedResourceType,
-    selectedResources: selectedResourceName,
-    selectedVersion: selectedResourceVersion,
-    newTags: newTags,
-  };
+const handlePost = async () => {
+  try{
+    const payload = {
+      selectedResources: selectedResourceName,
+      selectedVersion: selectedResourceVersion,
+      newTags: newTags,
+    };
 
-  console.log("Final Form Data:", updatedFormData);
 
-  dispatch({ type: "ADD_POST", payload: updatedFormData });
-
-  handleClose();
-  setSnackbarOpen(true);
-  createButtonRef.current.focus();
+    const response = await axios.post("http://localhost:5000/tag", payload, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    console.log("Final Form Data:", payload);
+    if(response.status === 201){
+      handleClose();
+      setSnackbarOpen(true);
+      createButtonRef.current.focus();
+    }
+  }catch(err){
+    if (err.response) {
+        alert(`Error: ${err.response.data.message}`);
+    } else {
+        console.error("Error submitting documentation:", err);
+    }
+  }
 };
 
 
@@ -157,7 +188,7 @@ const handlePost = () => {
           />
 
             <Autocomplete
-              options={resourceDataName}
+              options={resourceNameOptions}
               value={selectedResourceName}
               onChange={(event, newValue) => {
                 setResourceName(newValue);
@@ -187,7 +218,7 @@ const handlePost = () => {
             />
 
             <Autocomplete
-                options={resourceDataVersion || []}
+                options={resourceVersionOptions}
                 value={selectedResourceVersion}
                 onChange={(event, newValue) => {
                 console.log("Selected Version:", newValue);

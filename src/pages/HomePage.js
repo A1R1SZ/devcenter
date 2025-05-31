@@ -1,3 +1,4 @@
+// HomePage.js
 import './App.css';
 import CatNavbar from '../components/catNavbar';
 import DevContent from '../components/devContent';
@@ -5,17 +6,41 @@ import { Box, Card, Typography } from '@mui/material';
 import TopNavbar from '../components/topNavbar';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import DevContentModal from '../components/devContentModal';
 
 function HomePage() {
     const [contents, setContents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedPost, setSelectedPost] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
 
-    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const today = new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    });
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/"); // Redirect to login if not logged in
+        }
+    }, [navigate]);
 
     useEffect(() => {
         const fetchContents = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
             try {
-                const response = await axios.get('http://localhost:8080/api/contents');
+                const response = await axios.get('http://localhost:5000/post', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
                 setContents(response.data);
             } catch (err) {
                 console.error('Failed to fetch contents', err);
@@ -25,6 +50,26 @@ function HomePage() {
         };
 
         fetchContents();
+    }, []);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            try {
+                const response = await axios.get("http://localhost:5000/api/user/profile", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                setCurrentUser(response.data.username);
+            } catch (err) {
+                console.error("Failed to fetch user", err);
+            }
+        };
+
+        fetchUser();
     }, []);
 
     return (
@@ -80,14 +125,6 @@ function HomePage() {
                     >
                         <CatNavbar />
 
-                        {/* Static Example Preview */}
-                        <DevContent
-                            title="🚀 Sample Post"
-                            category="Example"
-                            content="This is an example preview of how your DevContent post will look like."
-                            username="sample_user"
-                        />
-
                         {loading ? (
                             <Typography color="white" sx={{ textAlign: 'center', marginTop: '50px' }}>
                                 Loading...
@@ -99,13 +136,28 @@ function HomePage() {
                         ) : (
                             contents.map((item) => (
                                 <DevContent
-                                    key={item.id}
-                                    title={item.title}
-                                    category={item.category}
-                                    content={item.content}
-                                    username={item.username}
+                                    onClick={() => {setSelectedPost(item);console.log("Selected item",item)}}
+                                    key={item.post_id}
+                                    resource_name={item.resource_title}
+                                    title={item.post_title}
+                                    category={item.post_type}
+                                    content={item.post_content}
+                                    username={item.author_username}
+                                    currentUser={currentUser}
+                                    favouriteCounter={item.post_like}
+                                    commentCounter={item.post_comment}
+                                    bookmarkCounter={item.post_bookmark}
+                                    postImage={item.post_graphic}
+                                    resource_color={item.resource_color}
+                                    resource_version={item.resource_version}
                                 />
                             ))
+                        )}
+                        {selectedPost && (
+                            <DevContentModal
+                                post={selectedPost}
+                                onClose={() => setSelectedPost(null)}
+                            />
                         )}
                     </Card>
                 </Box>

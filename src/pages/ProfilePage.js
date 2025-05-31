@@ -2,8 +2,24 @@ import './App.css';
 import DevContent from '../components/devContent';
 import { Avatar, Box, Card, Typography } from '@mui/material';
 import TopNavbar from '../components/topNavbar';
+import { useEffect, useState } from 'react';
+import { jwtDecode } from 'jwt-decode';
 
 function ProfilePage() {
+  const [username, setUsername] = useState('');
+
+      useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const decoded = jwtDecode(token);
+            setUsername(decoded.username || 'User');
+          } catch (error) {
+            console.error('Error decoding token:', error);
+          }
+        }
+      }, []);
+
     return (
         <>
             <TopNavbar />
@@ -26,7 +42,7 @@ function ProfilePage() {
                         fontSize: 30,
                     }}
                 >
-                    @USERPROFILE
+                    @{username}
                 </Typography>
             </Box>
             <Typography

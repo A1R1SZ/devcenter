@@ -47,6 +47,12 @@ export default function SideNavbar({ open, toggleSideNavbar }) {
                     transition: '0.3s ease-in-out',
                   },
                 }}
+                onClick={() => {
+                  if (text === 'LOGOUT') {
+                    localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
+                  }
+                }}
               >
                 <ListItemIcon sx={{ color: 'white' }}>{icon}</ListItemIcon>
                 <ListItemText primary={text} />

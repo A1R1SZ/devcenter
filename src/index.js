@@ -4,19 +4,16 @@ import './index.css';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import reportWebVitals from './reportWebVitals';
-import { PostProvider } from './data/contextData'
-import { RoleProvider } from './data/roleData';
+import AppProviders from './routes/AppProvider';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <RoleProvider>
-      <PostProvider>
+    <AppProviders>
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>
-      </PostProvider>
-    </RoleProvider>
+    </AppProviders>
   </React.StrictMode>
 );
 
