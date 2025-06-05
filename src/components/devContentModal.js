@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Box,
@@ -16,6 +16,8 @@ import ForumIcon from "@mui/icons-material/Forum";
 import SendIcon from "@mui/icons-material/Send";
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
+import { likePost, bookmarkPost } from '../connection/api/postActions';
+import axios from "axios";
 
 function getYouTubeEmbedUrl(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -24,7 +26,6 @@ function getYouTubeEmbedUrl(url) {
     ? `https://www.youtube.com/embed/${match[2]}`
     : null;
 }
-
 
 const modalStyle = {
   position: "absolute",
@@ -40,34 +41,104 @@ const modalStyle = {
   color: "white",
 };
 
-const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,bookmarkCounter,}) => {
-  const [openForum, setOpenForum] = useState(false);
+const DevContentModal = ({
+  post,
+  onClose,
+  favouriteCounter,
+  commentCounter,
+  bookmarkCounter,
+  isLiked,
+  isBookmarked,
+  onPostUpdate,
+  openForumInitially,
+}) => {
+
+const [openForum, setOpenForum] = useState(openForumInitially || false);
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
+  const [isFavoriteActive, setIsFavoriteActive] = useState(isLiked);
+  const [isBookmarkActive, setIsBookmarkActive] = useState(isBookmarked);
+  const [likes, setLikes] = useState(Number(favouriteCounter) || 0);
+  const [bookmarks, setBookmarks] = useState(Number(bookmarkCounter) || 0);
 
-  const [isFavoriteActive, setIsFavoriteActive] = useState(false);
-  const [isCommentActive, setIsCommentActive] = useState(false);
-  const [isBookmarkActive, setIsBookmarkActive] = useState(false);
+  const handleLike = async (e) => {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    try {
+      await likePost(post.post_id, token);
+      await fetchSinglePost();
+    } catch (err) {
+      console.error("Error liking post from modal:", err);
+    }
+  };
 
-    const SocialActions = () => (
+  const handleBookmark = async (e) => {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    try {
+      await bookmarkPost(post.post_id, token);
+      await fetchSinglePost();
+    } catch (err) {
+      console.error("Error bookmarking post from modal:", err);
+    }
+  };
+
+  const fetchSinglePost = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`http://localhost:5000/post/${post.post_id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const updatedPost = response.data;
+      setIsFavoriteActive(updatedPost.is_liked);
+      setIsBookmarkActive(updatedPost.is_bookmarked);
+      setLikes(updatedPost.post_like_count);
+      setBookmarks(updatedPost.post_bookmark_count);
+      setComments(updatedPost.comments || []);
+
+      
+    } catch (error) {
+      console.error("Failed to refresh modal content", error);
+    }
+  };
+
+  useEffect(() => {
+    if (post?.post_id) {
+      fetchSinglePost();
+    }
+  }, [post?.post_id]);
+
+  const SocialActions = () => (
     <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2, mt: 1 }}>
-      <IconButton onClick={(e) => { e.stopPropagation(); setIsFavoriteActive(!isFavoriteActive); }}>
-        <Typography color="white" sx={{ marginRight: '5px' }}>{post.post_like}</Typography>
+      <IconButton onClick={handleLike}>
+        <Typography color="white" sx={{ marginRight: '5px' }}>{likes}</Typography>
         <FavoriteIcon sx={{ color: isFavoriteActive ? 'red' : 'white' }} />
       </IconButton>
-      <IconButton onClick={(e) => { e.stopPropagation(); setIsBookmarkActive(!isBookmarkActive); }}>
-        <Typography color="white">{post.post_bookmark}</Typography>
+      <IconButton onClick={handleBookmark}>
+        <Typography color="white">{bookmarks}</Typography>
         <BookmarkIcon sx={{ color: isBookmarkActive ? 'orange' : 'white' }} />
       </IconButton>
     </Box>
   );
 
-  if (!post) return null;
-
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (input.trim()) {
-      setComments([...comments, input]);
-      setInput("");
+      const token = localStorage.getItem('token');
+      try {
+        await axios.post(`http://localhost:5000/post/${post.post_id}/comment`, {
+          comment: input,
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setInput("");
+        fetchSinglePost(); // Refresh all comments from DB
+      } catch (err) {
+        console.error("Failed to add comment:", err);
+      }
     }
   };
 
@@ -126,6 +197,7 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
     }
   };
 
+  if (!post) return null;
 
   return (
     <Modal open={Boolean(post)} onClose={onClose}>
@@ -147,13 +219,9 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
             defaultExpanded
           >
             <AccordionSummary>
-              <Typography>
-                <b>Forum</b>
-              </Typography>
+              <Typography><b>Forum</b></Typography>
             </AccordionSummary>
-            <AccordionDetails
-              sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
-            >
+            <AccordionDetails sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
               <Paper
                 component="form"
                 onSubmit={(e) => {
@@ -194,7 +262,7 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
                 ) : (
                   comments.map((comment, index) => (
                     <Box
-                      key={index}
+                      key={comment.comment_id || index}
                       sx={{
                         mb: 1.5,
                         p: 1.5,
@@ -203,36 +271,19 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
                         boxShadow: "0 0 4px rgba(0,0,0,0.2)",
                       }}
                     >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          mb: 1,
-                        }}
-                      >
-                        <Avatar sx={{ width: 30, height: 30, fontSize: 14 }}>
-                          U
-                        </Avatar>
+                      <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                        <Avatar sx={{ width: 30, height: 30, fontSize: 14 }}>U</Avatar>
                         <Box sx={{ ml: 1 }}>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ fontSize: 13 }}
-                          >
-                            Username
+                          <Typography variant="subtitle2" sx={{ fontSize: 13 }}>
+                            {comment.username || "Anonymous"}
                           </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{ fontSize: 11, color: "gray" }}
-                          >
-                            Just now
+                          <Typography variant="caption" sx={{ fontSize: 11, color: "gray" }}>
+                            {comment.created_at ? new Date(comment.created_at).toLocaleString() : "Just now"}
                           </Typography>
                         </Box>
                       </Box>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontSize: 14, color: "#ddd" }}
-                      >
-                        {comment}
+                      <Typography variant="body2" sx={{ fontSize: 14, color: "#ddd" }}>
+                        {comment.user_comment}
                       </Typography>
                     </Box>
                   ))
@@ -244,7 +295,7 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
 
         <Box sx={modalStyle}>
           {renderMedia()}
-          <Box sx={{ p: 3,flexGrow:1 }}>
+          <Box sx={{ p: 3, flexGrow: 1 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center">
               <Typography
                 sx={{
@@ -256,16 +307,16 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
                 {post.post_title}
               </Typography>
             </Box>
-            <Box  display="flex" justifyContent="space-between" alignItems="center">
-              <SocialActions/>
-              <IconButton onClick={() => setOpenForum((prev) => !prev)} sx={{color:"white"}}>
-                <Typography  sx={{ marginRight: '5px' }}>{post.post_comment}</Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <SocialActions />
+              <IconButton onClick={() => setOpenForum((prev) => !prev)} sx={{ color: "white" }}>
+                <Typography sx={{ marginRight: '5px' }}>{comments.length}</Typography>
                 <ForumIcon />
               </IconButton>
             </Box>
-            <Divider sx={{ my: 2, backgroundColor: "white", }} />
+            <Divider sx={{ my: 2, backgroundColor: "white" }} />
 
-            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 3,flexGrow:1}}>
+            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 3, flexGrow: 1 }}>
               {post.post_content}
             </Typography>
           </Box>

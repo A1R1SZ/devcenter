@@ -28,7 +28,7 @@ export default function CreateContentButton() {
   const [selectedResourceName,setResourceName] = useState(null);
   const [selectedResourceVersion,setResourceVersion] = useState(null);
   const [selectedResourceTag,setResourceTag] = useState(null);
-  const [contentType,setContentType] = useState("")
+  const [contentType,setContentType] = useState("Unofficial")
   const [newResourceTitle,setNewResourceTitle] = useState(null);
   const [newResourceContent,setNewResourceContent] = useState(null);
   const [newResourceImg,setNewResourceImg] = useState(null);
@@ -143,7 +143,7 @@ const { token } = useContext(UserContext);
 const handlePost = async () => {
   try {
     const formDataToSend = new FormData();
-    formDataToSend.append("resourceType", selectedResourceType);
+    formDataToSend.append("resourceType", contentType);
     formDataToSend.append("selectedResources", selectedResourceName);
     formDataToSend.append("selectedVersion", selectedResourceVersion);
     formDataToSend.append("selectedTag", selectedResourceTag?.resource_tag_name || selectedResourceTag);
@@ -166,6 +166,8 @@ const handlePost = async () => {
       setSnackbarOpen(true);
       handleClose();
       createButtonRef.current?.focus();
+      window.location.reload();
+
     }
   } catch (err) {
     if (err.response) {
@@ -242,8 +244,8 @@ const handlePost = async () => {
           >
             <Typography variant="h6"> Select Resource Type</Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
-              <Button variant="contained" onClick={() =>{ setFirstModal(false);setSecondModal(true);setResourceType("Main Content")}}>Main Content</Button>
-              <Button variant="contained" onClick={() =>{ setFirstModal(false);setSecondModal(true);setResourceType("Secondary Content")}}>Secondary Content</Button>
+              <Button variant="contained" onClick={() =>{ setFirstModal(false);setSecondModal(true);setContentType("Official")}}>Main Content</Button>
+              <Button variant="contained" onClick={() =>{ setFirstModal(false);setSecondModal(true);setContentType("Secondary ")}}>Secondary Content</Button>
             </Box>
           </Box>
         </Modal>

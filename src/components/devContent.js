@@ -12,6 +12,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import CommentIcon from '@mui/icons-material/Comment';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { likePost, bookmarkPost } from '../connection/api/postActions';
 import { useRole } from '../data/roleData';
 
 function getYouTubeEmbedUrl(url) {
@@ -29,17 +30,22 @@ export default function DevContent({
   content,
   username,
   currentUser,
-  favouriteCounter,
   commentCounter,
-  bookmarkCounter,
   postImage,
   resource_color,
   onClick,
   resource_version,
+  postId,
+  isLiked,
+  isBookmarked,
+  favouriteCounter,
+  bookmarkCounter,
 }) {
-  const [isFavoriteActive, setIsFavoriteActive] = useState(false);
   const [isCommentActive, setIsCommentActive] = useState(false);
-  const [isBookmarkActive, setIsBookmarkActive] = useState(false);
+  const [isFavoriteActive, setIsFavoriteActive] = useState(isLiked);
+  const [isBookmarkActive, setIsBookmarkActive] = useState(isBookmarked);
+  const [likes, setLikes] = useState(Number(favouriteCounter) || 0);
+  const [bookmarks, setBookmarks] = useState(Number(bookmarkCounter) || 0);
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const { role } = useRole();
@@ -54,21 +60,55 @@ export default function DevContent({
     setAnchorEl(null);
   };
 
+  const handleLike = async (e) => {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    try {
+      await likePost(postId, token);
+      setIsFavoriteActive(!isFavoriteActive);
+      setLikes(prev => isFavoriteActive ? prev - 1 : prev + 1);
+    } catch (err) {
+      console.error("Error liking post", err);
+    }
+  };
+
+
+  const handleBookmark = async (e) => {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    try {
+      await bookmarkPost(postId, token);
+      setIsBookmarkActive(!isBookmarkActive);
+      setBookmarks(prev => isBookmarkActive ? prev - 1 : prev + 1);
+    } catch (err) {
+      console.error("Error bookmarking post", err);
+    }
+  };
+
+  
+
+
   const isOwner = currentUser === username;
   const isModerator = role === 'moderator';
 
   const SocialActions = () => (
     <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2, mt: 2 }}>
-      <IconButton onClick={(e) => { e.stopPropagation(); setIsFavoriteActive(!isFavoriteActive); }}>
-        <Typography color="white" sx={{ marginRight: '5px' }}>{favouriteCounter}</Typography>
+      <IconButton onClick={handleLike}>
+        <Typography color="white" sx={{ marginRight: '5px' }}>{likes}</Typography>
         <FavoriteIcon sx={{ color: isFavoriteActive ? 'red' : 'white' }} />
       </IconButton>
-      <IconButton onClick={(e) => { e.stopPropagation(); setIsCommentActive(!isCommentActive); }}>
+      <IconButton
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsCommentActive(true); // highlight icon
+          onClick(true);            // pass signal to open forum
+        }}
+      >
         <Typography color="white" sx={{ marginRight: '5px' }}>{commentCounter}</Typography>
         <CommentIcon sx={{ color: isCommentActive ? 'lightblue' : 'white' }} />
       </IconButton>
-      <IconButton onClick={(e) => { e.stopPropagation(); setIsBookmarkActive(!isBookmarkActive); }}>
-        <Typography color="white">{bookmarkCounter}</Typography>
+      <IconButton onClick={handleBookmark}>
+        <Typography color="white">{bookmarks}</Typography>
         <BookmarkIcon sx={{ color: isBookmarkActive ? 'orange' : 'white' }} />
       </IconButton>
     </Box>
@@ -79,6 +119,7 @@ export default function DevContent({
   return (
     <>
       <Card
+        
         sx={{
           backgroundColor: resource_color,
           borderRadius: '5px 5px 0 0',
@@ -118,7 +159,7 @@ export default function DevContent({
           height: hasMedia ? '250px' : 'auto',
           cursor: 'pointer'
         }}
-        onClick={onClick}
+        onClick={() => onClick(false)}
       >
         <IconButton
           sx={{

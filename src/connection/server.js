@@ -615,6 +615,9 @@ app.put('/edit-tag', authenticateToken, async (req, res) => {
 app.get('/post', authenticateToken, async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
 
+  const userId = req.user.userId;
+
+
   if (!token) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -627,14 +630,51 @@ app.get('/post', authenticateToken, async (req, res) => {
         devusers.username AS author_username, 
         documentation.resource_name AS resource_title,
         documentation.resource_version AS resource_version,
-        color.resource_color
+        color.resource_color,
+
+        -- 💡 Count total likes/bookmarks per post
+        COUNT(DISTINCT post_like.like_id) AS post_like_count,
+        COUNT(DISTINCT post_bookmark.bookmark_id) AS post_bookmark_count,
+
+        -- 💡 Check if current user liked/bookmarked the post
+        COUNT(DISTINCT user_likes.like_id) > 0 AS is_liked,
+        COUNT(DISTINCT user_bookmarks.bookmark_id) > 0 AS is_bookmarked,
+
+        -- 💡 Count total comments per post
+        (
+          SELECT COUNT(*) FROM post_comment WHERE post_comment.post_id = post.post_id
+        ) AS post_comment
+
       FROM post
+
+      -- JOIN meta tables
       JOIN tag ON post.post_tag = tag.tag_id
       JOIN devusers ON post.post_author = devusers.id
       JOIN documentation ON post.post_resource = documentation.id
       LEFT JOIN color ON documentation.resource_name = color.resource_name
-      ORDER BY post.post_created_at DESC
-    `);
+
+      -- JOIN post_like and post_bookmark for total counts
+      LEFT JOIN post_like ON post.post_id = post_like.post_id
+      LEFT JOIN post_bookmark ON post.post_id = post_bookmark.post_id
+
+      -- JOIN again (aliased) to check if current user has liked/bookmarked
+      LEFT JOIN post_like AS user_likes 
+        ON post.post_id = user_likes.post_id AND user_likes.user_id = $1
+
+      LEFT JOIN post_bookmark AS user_bookmarks 
+        ON post.post_id = user_bookmarks.post_id AND user_bookmarks.user_id = $1
+
+      GROUP BY 
+        post.post_id, 
+        tag.resource_tag_name, 
+        devusers.username, 
+        documentation.resource_name, 
+        documentation.resource_version, 
+        color.resource_color
+
+      ORDER BY post.post_created_at DESC;
+
+    `,[userId]);
 
     res.json(postsResult.rows);
   } catch (err) {
@@ -642,6 +682,77 @@ app.get('/post', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error', err });
   }
 });
+
+app.get('/post/:id', authenticateToken, async (req, res) => {
+  const postId = req.params.id;
+  const userId = req.user.userId;
+
+  try {
+    // Fetch post and metadata
+    const result = await pool.query(
+      `
+      SELECT 
+        post.*, 
+        tag.resource_tag_name, 
+        devusers.username AS author_username, 
+        documentation.resource_name AS resource_title,
+        documentation.resource_version AS resource_version,
+        color.resource_color,
+        EXISTS (
+          SELECT 1 FROM post_like WHERE post_like.post_id = post.post_id AND post_like.user_id = $2
+        ) AS is_liked,
+        EXISTS (
+          SELECT 1 FROM post_bookmark WHERE post_bookmark.post_id = post.post_id AND post_bookmark.user_id = $2
+        ) AS is_bookmarked,
+        (
+          SELECT COUNT(*) FROM post_like WHERE post_like.post_id = post.post_id
+        ) AS post_like_count,
+        (
+          SELECT COUNT(*) FROM post_bookmark WHERE post_bookmark.post_id = post.post_id
+        ) AS post_bookmark_count
+      FROM post
+      JOIN tag ON post.post_tag = tag.tag_id
+      JOIN devusers ON post.post_author = devusers.id
+      JOIN documentation ON post.post_resource = documentation.id
+      LEFT JOIN color ON documentation.resource_name = color.resource_name
+      WHERE post.post_id = $1
+      `,
+      [postId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    const postData = result.rows[0];
+
+    // ✅ Fetch comments
+    const commentResult = await pool.query(
+      `
+      SELECT 
+        pc.comment_id, 
+        pc.user_comment, 
+        pc.created_at,
+        u.username
+      FROM post_comment pc
+      JOIN devusers u ON pc.user_id = u.id
+      WHERE pc.post_id = $1
+      ORDER BY pc.created_at DESC
+      `,
+      [postId]
+    );
+
+    // Attach comments to the post data
+    postData.comments = commentResult.rows;
+
+    res.json(postData);
+  } catch (err) {
+    console.error('Error fetching post:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 
 app.use('/uploads', express.static('uploads'));
 
@@ -718,6 +829,111 @@ app.post('/create-post', authenticateToken, upload.single('resource_graphic'), a
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Post Extra Functionality //
+
+app.post('/post/:postId/like', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const postId = req.params.postId;
+
+  try {
+    const existing = await pool.query(
+      `SELECT * FROM post_like WHERE post_id = $1 AND user_id = $2`,
+      [postId, userId]
+    );
+
+    if (existing.rows.length > 0) {
+      // Unlike
+      await pool.query(
+        `DELETE FROM post_like WHERE post_id = $1 AND user_id = $2`,
+        [postId, userId]
+      );
+      return res.json({ liked: false });
+    } else {
+      // Like
+      await pool.query(
+        `INSERT INTO post_like (post_id, user_id) VALUES ($1, $2)`,
+        [postId, userId]
+      );
+      return res.json({ liked: true });
+    }
+  } catch (err) {
+    console.error("Like Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post('/post/:postId/bookmark', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const postId = req.params.postId;
+
+  try {
+    const existing = await pool.query(
+      `SELECT * FROM post_bookmark WHERE post_id = $1 AND user_id = $2`,
+      [postId, userId]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `DELETE FROM post_bookmark WHERE post_id = $1 AND user_id = $2`,
+        [postId, userId]
+      );
+      return res.json({ bookmarked: false });
+    } else {
+      await pool.query(
+        `INSERT INTO post_bookmark (post_id, user_id) VALUES ($1, $2)`,
+        [postId, userId]
+      );
+      return res.json({ bookmarked: true });
+    }
+  } catch (err) {
+    console.error("Bookmark Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post('/post/:postId/comment', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const postId = req.params.postId;
+  const { comment } = req.body;
+
+  if (!comment?.trim()) {
+    return res.status(400).json({ message: "Empty comment not allowed" });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO post_comment (post_id, user_id, user_comment, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [postId, userId, comment]
+    );
+    res.status(201).json({ message: "Comment added" });
+  } catch (err) {
+    console.error("Comment Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get('/post/:postId/comments', async (req, res) => {
+  const postId = req.params.postId;
+
+  try {
+    const result = await pool.query(
+      `SELECT c.comment_id, c.user_comment, c.created_at, u.username
+       FROM post_comment c
+       JOIN users u ON c.user_id = u.user_id
+       WHERE c.post_id = $1
+       ORDER BY c.comment_created_at ASC`,
+      [postId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch Comments Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 
 

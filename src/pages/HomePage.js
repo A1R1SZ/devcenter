@@ -5,7 +5,7 @@ import DevContent from '../components/devContent';
 import { Box, Card, Typography } from '@mui/material';
 import TopNavbar from '../components/topNavbar';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DevContentModal from '../components/devContentModal';
 
@@ -15,14 +15,27 @@ function HomePage() {
     const [selectedPost, setSelectedPost] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [selectedTab, setSelectedTab] = useState(0);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    
+
+    const updatePostInList = (updatedPost) => {
+    setContents(prev =>
+        prev.map(post =>
+        Number(post.post_id) === Number(updatedPost.post_id)? { ...post, ...updatedPost } : post
+        )
+    );
+    };
+
 
     const handleTabChange = ( _, newValue) =>{
         setSelectedTab(newValue);
     }
 
-    const filteredContents = contents.filter((item) =>
+    const filteredContents = useMemo(() => {
+    return contents.filter(item =>
         selectedTab === 0 ? item.post_type === 'Official' : item.post_type === 'Unofficial'
     );
+    }, [contents, selectedTab]);
 
     const today = new Date().toLocaleDateString('en-GB', {
         day: '2-digit',
@@ -32,15 +45,7 @@ function HomePage() {
 
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            navigate("/"); // Redirect to login if not logged in
-        }
-    }, [navigate]);
-
-    useEffect(() => {
-        const fetchContents = async () => {
+            const fetchContents = async () => {
             const token = localStorage.getItem("token");
             if (!token) return;
 
@@ -58,6 +63,14 @@ function HomePage() {
             }
         };
 
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/"); // Redirect to login if not logged in
+        }
+    }, [navigate]);
+
+    useEffect(() => {
         fetchContents();
     }, []);
 
@@ -145,17 +158,22 @@ function HomePage() {
                         ) : (
                             filteredContents.map((item) => (
                                 <DevContent
-                                    onClick={() => {setSelectedPost(item);console.log("Selected item",item)}}
-                                    key={item.post_id}
+                                    onClick={(openForum) => {
+                                        setSelectedPost({ ...item, openForum });
+                                    }}
+                                    key={`${item.post_id}-${refreshTrigger}`}
+                                    postId={item.post_id}
+                                    favouriteCounter={item.post_like_count}
+                                    bookmarkCounter={item.post_bookmark_count}
+                                    isLiked={item.is_liked}
+                                    isBookmarked={item.is_bookmarked}
                                     resource_name={item.resource_title}
                                     title={item.post_title}
                                     category={item.post_type}
                                     content={item.post_content}
                                     username={item.author_username}
                                     currentUser={currentUser}
-                                    favouriteCounter={item.post_like}
                                     commentCounter={item.post_comment}
-                                    bookmarkCounter={item.post_bookmark}
                                     postImage={
                                     item.post_graphic
                                         ? item.post_graphic.startsWith("http")
@@ -171,7 +189,35 @@ function HomePage() {
                         {selectedPost && (
                             <DevContentModal
                                 post={selectedPost}
-                                onClose={() => setSelectedPost(null)}
+                                onClose={async () => {
+                                try {
+                                    const token = localStorage.getItem('token');
+                                    const response = await axios.get('http://localhost:5000/post', {
+                                    headers: { Authorization: `Bearer ${token}` },
+                                    });
+
+                                    const freshData = response.data;
+
+                                    // 💣 Nuclear soft refresh: clear first, then reset
+                                    setContents([]); 
+                                    setTimeout(() => {
+                                    setContents(freshData); 
+                                    setRefreshTrigger(prev => prev + 1); // 🔄 trigger re-render via new key
+                                    }, 50);
+
+                                    setSelectedPost(null); // Close modal
+                                } catch (err) {
+                                    console.error('Failed to refresh after modal close', err);
+                                    setSelectedPost(null);
+                                }
+                                }}
+                                openForumInitially={selectedPost.openForum}
+                                favouriteCounter={selectedPost.post_like_count}
+                                bookmarkCounter={selectedPost.post_bookmark_count}
+                                commentCounter={selectedPost.post_comment}
+                                isLiked={selectedPost.is_liked}
+                                isBookmarked={selectedPost.is_bookmarked}
+                                onPostUpdate={updatePostInList}
                             />
                         )}
                     </Card>
