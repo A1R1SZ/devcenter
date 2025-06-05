@@ -15,6 +15,7 @@ function DocumentationPage() {
 
   const [resourceNameOptions, setResourceNameOptions] = useState([]);
   const [resourceVersionOptions, setResourceVersionOptions] = useState([]);
+  const [resourceColor,setResourceColor] = useState(null);
   
   const [documentationData, setDocumentationData] = useState([]);
 
@@ -96,6 +97,21 @@ function DocumentationPage() {
       })
       .then(res => setResourceVersionOptions(res.data))
       .catch(err => console.error("Failed to fetch versions:", err));
+
+      axios.get("http://localhost:5000/color", {
+        params: {
+          resourceName: selectedResourceName
+        }
+      })
+      .then(res => {
+        console.log("Received color:", res.data.resource_color);
+        if (res.data.length > 0) {
+          setResourceColor(res.data[0].resource_color);
+        } else {
+          setResourceColor("white"); // fallback color
+        }
+      })
+      .catch(err => console.error("Failed to fetch color:", err));
     }
   }, [selectedResourceName]);
 
@@ -267,7 +283,7 @@ function DocumentationPage() {
                   sx={{
                     fontSize: 50,
                     fontWeight: 600,
-                    color: selectedResourceName && languageColors[selectedResourceName] ? languageColors[selectedResourceName] : "white",
+                    color: resourceColor,
                     textTransform: "uppercase",
                   }}
                 >

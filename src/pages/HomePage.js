@@ -14,6 +14,15 @@ function HomePage() {
     const [loading, setLoading] = useState(true);
     const [selectedPost, setSelectedPost] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
+    const [selectedTab, setSelectedTab] = useState(0);
+
+    const handleTabChange = ( _, newValue) =>{
+        setSelectedTab(newValue);
+    }
+
+    const filteredContents = contents.filter((item) =>
+        selectedTab === 0 ? item.post_type === 'Official' : item.post_type === 'Unofficial'
+    );
 
     const today = new Date().toLocaleDateString('en-GB', {
         day: '2-digit',
@@ -123,7 +132,7 @@ function HomePage() {
                             overflowY: 'auto',
                         }}
                     >
-                        <CatNavbar />
+                        <CatNavbar  value={selectedTab} onChange={handleTabChange}/>
 
                         {loading ? (
                             <Typography color="white" sx={{ textAlign: 'center', marginTop: '50px' }}>
@@ -134,7 +143,7 @@ function HomePage() {
                                 No content available.
                             </Typography>
                         ) : (
-                            contents.map((item) => (
+                            filteredContents.map((item) => (
                                 <DevContent
                                     onClick={() => {setSelectedPost(item);console.log("Selected item",item)}}
                                     key={item.post_id}
@@ -147,7 +156,13 @@ function HomePage() {
                                     favouriteCounter={item.post_like}
                                     commentCounter={item.post_comment}
                                     bookmarkCounter={item.post_bookmark}
-                                    postImage={item.post_graphic}
+                                    postImage={
+                                    item.post_graphic
+                                        ? item.post_graphic.startsWith("http")
+                                        ? item.post_graphic // online image
+                                        : `http://localhost:5000/uploads/${item.post_graphic}` // local image
+                                        : null
+                                    }
                                     resource_color={item.resource_color}
                                     resource_version={item.resource_version}
                                 />

@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const pool = require("./database");
@@ -14,6 +15,41 @@ app.use(cors({
 }));
 app.use(express.json());
 app.listen(5000, () => console.log("✅ Server running on http://localhost:5000"));
+
+const multer = require('multer');
+const path = require('path');
+
+// Configure storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Ensure this directory exists
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Initialize upload
+const upload = multer({ storage: storage });
+// Upload file route (used by frontend to upload an image/file before submitting form)
+app.post('/upload-file', upload.single('file'), (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // You can return the filename so frontend can use it when posting documentation
+    return res.status(200).json({ 
+      message: 'File uploaded successfully',
+      filePath: `/uploads/${file.filename}` // Optional: useful for later usage
+    });
+  } catch (err) {
+    console.error('File upload error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Registration route
 app.post("/register", async (req, res) => {
@@ -66,7 +102,7 @@ app.post("/login", async (req, res) => {
         const token = jwt.sign(
             { userId: user.id, username: user.username },
             process.env.JWT_SECRET,
-            { expiresIn: "1h" }
+            { expiresIn: "7d" }
         );
         
         res.json({ token });
@@ -176,6 +212,7 @@ app.post('/documentation',authenticateToken, async (req, res) => {
   try {
     const {
       resource_name,
+      resource_color,
       resource_version,
       resource_type,
       resource_title,
@@ -191,8 +228,11 @@ app.post('/documentation',authenticateToken, async (req, res) => {
     );
 
     if (isNewResource.rows[0].count === '0') {
-      // New Resource: resource_name must be unique
-      // OK to insert
+      await pool.query(`INSERT INTO color(resource_name,resource_color) VALUES ($1 , $2)`,
+        [
+          resource_name,resource_color
+        ]
+      )
     } else {
       // Existing Resource: version must not exist for this resource_name
       const versionExists = await pool.query(
@@ -254,6 +294,21 @@ app.get("/documentation/filter", async (req, res) => {
   }
 });
 
+app.get("/color", async (req, res) => {
+  const { resourceName } = req.query;
+  try {
+      const result = await pool.query(
+          `SELECT * FROM color 
+           WHERE resource_name = $1`,
+          [resourceName]
+      );
+
+      res.json(result.rows);
+  } catch (err) {
+      console.error("Fetch colors error:", err);
+      res.status(500).json({ message: "Server error" });
+  }
+});
 
 app.get('/documentation/names', async (req, res) => {
   const { resourceType } = req.query;
@@ -286,7 +341,7 @@ app.get('/documentation/versions', async (req, res) => {
       'SELECT DISTINCT resource_version FROM documentation WHERE resource_type = $1 AND resource_name = $2',
       [resourceType, resourceName]
     );
-
+    
     // Ensure result.rows is an array and contains the expected data
     if (Array.isArray(result.rows)) {
       const versions = result.rows.map(v => v.resource_version); // Extract the resource_version from each row
@@ -434,6 +489,8 @@ app.get('/tag-filter', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
 
 app.post('/tag', authenticateToken, async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -586,6 +643,81 @@ app.get('/post', authenticateToken, async (req, res) => {
   }
 });
 
+app.use('/uploads', express.static('uploads'));
+
+
+app.post('/create-post', authenticateToken, upload.single('resource_graphic'), async (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+
+  const {
+    resourceType,
+    selectedResources,
+    selectedVersion,
+    selectedTag,
+    resource_title,
+    resource_content,
+  } = req.body;
+
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const resource_author = req.user.userId;
+
+    // Get related documentation ID
+    const docResult = await pool.query(
+      `SELECT id FROM documentation WHERE resource_name = $1 AND resource_version = $2`,
+      [selectedResources, selectedVersion]
+    );
+
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Documentation not found' });
+    }
+    const documentationId = docResult.rows[0].id;
+
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Documentation not found' });
+    }
+
+    const tagResult = await pool.query(
+      `SELECT tag_id FROM tag WHERE documentation_id = $1 AND resource_tag_name = $2`,
+      [documentationId, selectedTag?.resource_tag_name || selectedTag]
+    );
+
+    if (tagResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Tag is not found' });
+    }
+
+    const tagId = tagResult.rows[0].tag_id;
+
+    // Insert new post
+    const result = await pool.query(
+      `INSERT INTO post (
+        post_type,post_tag, post_title, post_content, post_author,
+        post_created_at, post_graphic, post_resource
+      ) VALUES ($1, $2, $3, $4,$5, NOW(), $6,$7) RETURNING post_id`,
+      [
+        resourceType,
+        tagId,
+        resource_title,
+        resource_content,
+        resource_author,
+        req.file ? req.file.filename : null, // optionally: `/uploads/${req.file.filename}`
+        documentationId
+      ]
+    );
+
+    res.status(201).json({
+      message: "Post created successfully",
+      postId: result.rows[0].id
+    });
+
+  } catch (err) {
+    console.error('Error creating post:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 

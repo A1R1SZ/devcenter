@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   Button,
   Modal,
@@ -11,6 +11,7 @@ import {
 import { usePostContext } from "../data/contextData";
 import { resourceName, resourceType } from "../data/generalData";
 import axios from "axios";
+import { UserContext } from "../contexts/UserContext";
 
 
 export default function CreateContentButton() {
@@ -18,7 +19,7 @@ export default function CreateContentButton() {
   const [isModerator,setIsModerator] = useState(true)
   const [thirdModal,setThirdModal] = useState(false)
   const [secondModal,setSecondModal] = useState(false)
-  const [firstModal,setFirstModal] = useState(true)
+  const [firstModal,setFirstModal] = useState(false)
 
   const [resourceNameOptions, setResourceNameOptions] = useState([]);
   const [resourceVersionOptions, setResourceVersionOptions] = useState([]);
@@ -26,17 +27,12 @@ export default function CreateContentButton() {
   const [selectedResourceType,setResourceType] = useState(null);
   const [selectedResourceName,setResourceName] = useState(null);
   const [selectedResourceVersion,setResourceVersion] = useState(null);
+  const [selectedResourceTag,setResourceTag] = useState(null);
+  const [contentType,setContentType] = useState("")
   const [newResourceTitle,setNewResourceTitle] = useState(null);
   const [newResourceContent,setNewResourceContent] = useState(null);
   const [newResourceImg,setNewResourceImg] = useState(null);
-
-  const resourceDataName =
-  selectedResourceType === "Language"
-  ? resourceName[0] || []
-  : selectedResourceType === "Tools" || selectedResourceType === "Package"
-  ? resourceName[1] || []
-  : [];
-
+  const [tags, setTags] = useState([]);
 
 
   const [open, setOpen] = useState(false);
@@ -64,8 +60,7 @@ export default function CreateContentButton() {
         .then(res => setResourceNameOptions(res.data))
         .catch(err => console.error("Failed to fetch names:", err));
       }
-    }, [selectedResourceType]);
-  
+    }, [selectedResourceType]);  
     useEffect(() => {
       if (selectedResourceType && selectedResourceName) {
         setResourceVersion(null);
@@ -77,8 +72,29 @@ export default function CreateContentButton() {
         })
         .then(res => setResourceVersionOptions(res.data))
         .catch(err => console.error("Failed to fetch versions:", err));
+        
       }
     }, [selectedResourceName]);
+
+    useEffect(() => {
+    if (selectedResourceName && selectedResourceVersion) {
+      axios.get("http://localhost:5000/tag-filter", {
+        params: {
+          resourceName: selectedResourceName,
+          resourceVersion: selectedResourceVersion,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      .then(res => {
+        setTags(res.data);
+      })
+      .catch(err => {
+        console.error("Failed to fetch tags:", err);
+      });
+    }
+  }, [selectedResourceName, selectedResourceVersion]);
 
   const fileInputRef = useRef(null);
   const createButtonRef = useRef(null);
@@ -123,25 +139,42 @@ export default function CreateContentButton() {
     if (file) handleImageChange({ target: { files: [file] } });
   };
 
-  const handlePost = () => {
-    const updatedFormData = {
-      resourceType: selectedResourceType,
-      selectedResources: selectedResourceName,
-      selectedVersion: selectedResourceVersion,
-      newDocumentTitle: newResourceTitle,
-      newDocumentContent: newResourceContent,
-      newDocumentImage: newResourceImg,
-    };
-  
-    console.log("Final Form Data:", updatedFormData);
-  
-    dispatch({ type: "ADD_POST", payload: updatedFormData });
-  
-    handleClose();
-    setSnackbarOpen(true);
-    createButtonRef.current.focus();
-  };
+const { token } = useContext(UserContext);
+const handlePost = async () => {
+  try {
+    const formDataToSend = new FormData();
+    formDataToSend.append("resourceType", selectedResourceType);
+    formDataToSend.append("selectedResources", selectedResourceName);
+    formDataToSend.append("selectedVersion", selectedResourceVersion);
+    formDataToSend.append("selectedTag", selectedResourceTag?.resource_tag_name || selectedResourceTag);
+    formDataToSend.append("resource_title", newResourceTitle);
+    formDataToSend.append("resource_content", newResourceContent);
 
+    if (newResourceImg) {
+      formDataToSend.append("resource_graphic", newResourceImg);
+    }
+
+    const response = await axios.post("http://localhost:5000/create-post", formDataToSend, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 201) {
+      dispatch({ type: "ADD_POST", payload: response.data }); // Assuming backend returns created post
+      setSnackbarOpen(true);
+      handleClose();
+      createButtonRef.current?.focus();
+    }
+  } catch (err) {
+    if (err.response) {
+      alert(`Error: ${err.response.data.message}`);
+    } else {
+      console.error("Error submitting documentation:", err);
+    }
+  }
+};
 
   return (
     <>
@@ -185,7 +218,7 @@ export default function CreateContentButton() {
         ref={createButtonRef}
         sx={{ backgroundColor: "white", color: "black" }}
         aria-label="Create a new post"
-        onClick={() => setOpen(true)}
+        onClick={() => setFirstModal(true)}
       >
         Create Post
       </Button>
@@ -303,13 +336,40 @@ export default function CreateContentButton() {
         }}
       />
     </Box>
-
+      <Autocomplete
+        options={tags}
+        getOptionLabel={(option) => option.resource_tag_name || ""} 
+        value={selectedResourceTag}
+        onChange={(event, newValue) => {
+          setResourceTag(newValue);
+          console.log("Selected Tag:", newValue);
+        }}
+        disabled={!selectedResourceVersion}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Tags"
+            variant="outlined"
+          />
+        )}
+        sx={{
+          flex: 1,
+          bgcolor: selectedResourceName ? "#393636" : "#2e2e2e",
+          borderRadius: "5px",
+          "& .MuiInputBase-input": { color: "white" },
+          "& .MuiInputLabel-root": { color: "whitesmoke" },
+          "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+        }}
+      />
     {/* Navigation Buttons */}
     <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
       <Button variant="contained" onClick={() => { setFirstModal(true); setSecondModal(false); }}>
         Back
       </Button>
-      <Button variant="contained" onClick={() => { setSecondModal(false); setThirdModal(true); }}>
+      <Button
+        disabled = {!selectedResourceName || !selectedResourceType|| !selectedResourceVersion}
+        variant="contained" 
+        onClick={() => { setSecondModal(false); setThirdModal(true); }}>
         Continue
       </Button>
     </Box>
@@ -317,22 +377,22 @@ export default function CreateContentButton() {
 </Modal>
 
 <Modal open={thirdModal} onClose={() => setThirdModal(false)}>
-  <Box
-    sx={{
-      bgcolor: "#2c2c2c",
-      color: "white",
-      borderRadius: 2,
-      p: 4,
-      width: "90%",
-      maxWidth: "600px",
-      mx: "auto",
-      my: "10vh",
-      display: "flex",
-      flexDirection: "column",
-      gap: 3,
-      boxShadow: 10,
-    }}
-  >
+    <Box
+      sx={{
+        bgcolor: "#2c2c2c",
+        color: "white",
+        borderRadius: 2,
+        p: 4,
+        width: "700px",
+        maxHeight: "90vh", // Ensure it doesn't exceed viewport
+        overflowY: "auto", // Enable vertical scroll
+        mx: "auto",
+        mt: "5vh", // Reduce to give more scroll space
+        display: "flex",
+        flexDirection: "column",
+        gap: 3,
+      }}
+    >
     <Typography variant="h6" align="center" sx={{ mb: 1 }}>
       Finalize Documentation
     </Typography>

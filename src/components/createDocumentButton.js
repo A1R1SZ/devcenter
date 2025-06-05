@@ -8,21 +8,25 @@ import {
   Stack,
   Snackbar,
   Typography,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
 } from "@mui/material";
 import { usePostContext } from "../data/contextData";
-import {resourceType } from "../data/generalData";
+import { resourceType } from "../data/generalData";
 import axios from "axios";
 import { UserContext } from "../contexts/UserContext";
+import { HexColorPicker } from "react-colorful";
 
 export default function CreateDocumentationButton() {
-
   const [selectedResourceType, setResourceType] = useState(null);
   const [selectedResourceName, setResourceName] = useState(null);
   const [selectedResourceVersion, setResourceVersion] = useState(null);
-  const [newResourceTitle, setNewResourceTitle] = useState(null);
-  const [newResourceContent, setNewResourceContent] = useState(null);
+  const [newResourceTitle, setNewResourceTitle] = useState("");
+  const [newResourceContent, setNewResourceContent] = useState("");
   const [resourceNameOptions, setResourceNameOptions] = useState([]);
-  
+  const [selectedColor, setSelectedColor] = useState("#aabbcc");
+
   const [open, setOpen] = useState(false);
   const [stepModalOpen, setStepModalOpen] = useState(false);
   const [resouceExistance, setResourceExistance] = useState(null);
@@ -30,60 +34,62 @@ export default function CreateDocumentationButton() {
 
   const createButtonRef = useRef(null);
   const { dispatch } = usePostContext();
+  const { token } = useContext(UserContext);
 
-  
+  const isValidHex = /^#([0-9A-Fa-f]{3}){1,2}$/.test(selectedColor);
 
   const handleClose = () => {
     setOpen(false);
     resetFormData();
   };
 
-  const { token } = useContext(UserContext);
-
   const handlePost = async () => {
     try {
-        const payload = {
-            resource_name: selectedResourceName,
-            resource_version: selectedResourceVersion,
-            resource_type: selectedResourceType,
-            resource_title: newResourceTitle,
-            resource_content: newResourceContent,
-        };
+      const payload = {
+        resource_name: selectedResourceName,
+        resource_color:selectedColor,
+        resource_version: selectedResourceVersion,
+        resource_type: selectedResourceType,
+        resource_title: newResourceTitle,
+        resource_content: newResourceContent,
+      };
 
-        // Validate if all fields are filled
-        if (Object.values(payload).some(val => !val)) {
-            alert("Please fill in all fields.");
-            return;
+      if (Object.values(payload).some((val) => !val)) {
+        alert("Please fill in all fields.");
+        return;
+      }
+
+      const response = await axios.post(
+        "http://localhost:5000/documentation",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
+      );
 
-        const response = await axios.post("http://localhost:5000/documentation", payload, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
-
-        if (response.status === 201) {
-            dispatch({ type: "ADD_POST", payload });
-            setSnackbarOpen(true);
-            handleClose();
-            createButtonRef.current?.focus();
-        }
+      if (response.status === 201) {
+        dispatch({ type: "ADD_POST", payload });
+        setSnackbarOpen(true);
+        handleClose();
+        createButtonRef.current?.focus();
+      }
     } catch (err) {
-        if (err.response) {
-            alert(`Error: ${err.response.data.message}`);
-        } else {
-            console.error("Error submitting documentation:", err);
-        }
+      if (err.response) {
+        alert(`Error: ${err.response.data.message}`);
+      } else {
+        console.error("Error submitting documentation:", err);
+      }
     }
   };
-
 
   const resetFormData = () => {
     setResourceType(null);
     setResourceName(null);
     setResourceVersion(null);
-    setNewResourceTitle(null);
-    setNewResourceContent(null);
+    setNewResourceTitle("");
+    setNewResourceContent("");
     setResourceExistance(null);
   };
 
@@ -91,17 +97,47 @@ export default function CreateDocumentationButton() {
     if (selectedResourceType) {
       setResourceName(null);
       setResourceVersion(null);
-      axios.get("http://localhost:5000/documentation/names", {
-        params: { resourceType: selectedResourceType },
-      })
-        .then(res => setResourceNameOptions(res.data))
-        .catch(err => console.error("Failed to fetch names:", err));
+      axios
+        .get("http://localhost:5000/documentation/names", {
+          params: { resourceType: selectedResourceType },
+        })
+        .then((res) => setResourceNameOptions(res.data))
+        .catch((err) => console.error("Failed to fetch names:", err));
     }
   }, [selectedResourceType]);
 
+  useEffect(() => {
+    if (
+      resouceExistance &&
+      selectedResourceName &&
+      selectedResourceVersion &&
+      selectedResourceType
+    ) {
+      axios
+        .get("http://localhost:5000/documentation/details", {
+          params: {
+            resourceType: selectedResourceType,
+            resourceName: selectedResourceName,
+            resourceVersion: selectedResourceVersion,
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((res) => {
+          setNewResourceTitle(res.data.title || "");
+          setNewResourceContent(res.data.content || "");
+        })
+        .catch((err) => {
+          console.error("Failed to fetch resource details:", err);
+          setNewResourceTitle("");
+          setNewResourceContent("");
+        });
+    }
+  }, [resouceExistance, selectedResourceName, selectedResourceVersion]);
+
   return (
     <>
-      {/* ✅ SNACKBAR */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
@@ -136,7 +172,6 @@ export default function CreateDocumentationButton() {
         }
       />
 
-      {/* ✅ STEP MODAL */}
       <Modal
         open={stepModalOpen}
         onClose={() => setStepModalOpen(false)}
@@ -198,7 +233,6 @@ export default function CreateDocumentationButton() {
         </Box>
       </Modal>
 
-      {/* ✅ MAIN BUTTON */}
       <Button
         ref={createButtonRef}
         sx={{ backgroundColor: "white", color: "black" }}
@@ -208,7 +242,6 @@ export default function CreateDocumentationButton() {
         Create Documentation
       </Button>
 
-      {/* ✅ DOCUMENTATION MODAL */}
       <Modal
         open={open}
         onClose={handleClose}
@@ -217,6 +250,7 @@ export default function CreateDocumentationButton() {
           alignItems: "center",
           justifyContent: "center",
           zIndex: 1300,
+          overflowY: "auto",
         }}
       >
         <Box
@@ -230,61 +264,25 @@ export default function CreateDocumentationButton() {
           }}
         >
           <h2 style={{ marginBottom: "16px" }}>
-            Create Documentation{" "}
-            {resouceExistance ? "(Existing Resource)" : "(New Resource)"}
+            Create Documentation {resouceExistance ? "(Existing Resource)" : "(New Resource)"}
           </h2>
 
-          {/* RESOURCE TYPE */}
-          <Autocomplete
-            options={resourceType}
-            value={selectedResourceType}
-            onChange={(e, value) => {
-              setResourceType(value);
-              setResourceName(null);
-              setResourceVersion(null);
-              console.log("Selected Type", value);
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Resource Type"
-                variant="outlined"
-                sx={{
-                  backgroundColor: "#393636",
-                  borderRadius: "5px",
-                  "& .MuiInputBase-input": { color: "white" },
-                  "& .MuiInputLabel-root": { color: "whitesmoke" },
-                  "& .MuiInputLabel-root.Mui-focused": { color: "white" },
-                }}
-              />
-            )}
-            sx={{
-              mb: 2,
-              bgcolor: "#393636",
-              "& .MuiInputBase-input": { color: "white" },
-              "& .MuiInputLabel-root": { color: "whitesmoke" },
-              "& .MuiInputLabel-root.Mui-focused": { color: "white" },
-            }}
-          />
-
-          {/* RESOURCE NAME */}
-          {resouceExistance ? (
+          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
             <Autocomplete
-              options={resourceNameOptions}
-              value={selectedResourceName}
-              onChange={(event, newValue) => {
-                setResourceName(newValue);
+              options={resourceType}
+              value={selectedResourceType}
+              onChange={(e, value) => {
+                setResourceType(value);
+                setResourceName(null);
                 setResourceVersion(null);
-                console.log("Selected Name:", newValue);
               }}
-              disabled={!selectedResourceType}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Resource Name"
+                  label="Resource Type"
                   variant="outlined"
                   sx={{
-                    backgroundColor: selectedResourceType ? "#393636" : "#2e2e2e",
+                    backgroundColor: "#393636",
                     borderRadius: "5px",
                     "& .MuiInputBase-input": { color: "white" },
                     "& .MuiInputLabel-root": { color: "whitesmoke" },
@@ -292,73 +290,129 @@ export default function CreateDocumentationButton() {
                   }}
                 />
               )}
-              sx={{
-                mb: 2,
-                backgroundColor: "#393636",
-                flex: 1,
-              }}
+              sx={{ flex: 1 }}
             />
-          ) : (
+
+            {resouceExistance ? (
+              <Autocomplete
+                options={resourceNameOptions}
+                value={selectedResourceName}
+                onChange={(event, newValue) => {
+                  setResourceName(newValue);
+                  setResourceVersion(null);
+                }}
+                disabled={!selectedResourceType}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Resource Name"
+                    variant="outlined"
+                    sx={{
+                      backgroundColor: selectedResourceType ? "#393636" : "#2e2e2e",
+                      borderRadius: "5px",
+                      "& .MuiInputBase-input": { color: "white" },
+                      "& .MuiInputLabel-root": { color: "whitesmoke" },
+                      "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+                    }}
+                  />
+                )}
+                sx={{ flex: 1 }}
+              />
+            ) : (
+              <TextField
+                disabled={!selectedResourceType}
+                value={selectedResourceName || ""}
+                onChange={(event) => setResourceName(event.target.value)}
+                label="Resource Name"
+                variant="outlined"
+                sx={{
+                  flex: 1,
+                  backgroundColor: selectedResourceType ? "#393636" : "#2e2e2e",
+                  borderRadius: "5px",
+                  "& .MuiInputBase-input": { color: "white" },
+                  "& .MuiInputLabel-root": { color: "whitesmoke" },
+                  "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+                }}
+              />
+            )}
+
             <TextField
-              disabled={!selectedResourceType}
-              value={selectedResourceName}
-              onChange={(event) => {
-                console.log("Name Written:", event.target.value);
-                setResourceName(event.target.value);
-              }}
-              label="Resource Name"
+              disabled={!selectedResourceName}
+              value={selectedResourceVersion || ""}
+              onChange={(event) => setResourceVersion(event.target.value)}
+              label="Resource Version"
               variant="outlined"
               sx={{
                 flex: 1,
-                width: "100%",
-                mb: 2,
-                backgroundColor: selectedResourceType ? "#393636" : "#2e2e2e",
+                backgroundColor: selectedResourceName ? "#393636" : "#2e2e2e",
                 borderRadius: "5px",
                 "& .MuiInputBase-input": { color: "white" },
                 "& .MuiInputLabel-root": { color: "whitesmoke" },
                 "& .MuiInputLabel-root.Mui-focused": { color: "white" },
               }}
             />
-          )}
+          </Stack>
 
-          <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
-            <Box flex={1}>
-              {/* VERSION */}
-              <TextField
-                disabled={!selectedResourceName}
-                value={selectedResourceVersion}
-                onChange={(event) => {
-                  console.log("Tags Written:", event.target.value);
-                  setResourceVersion(event.target.value);
-                }}
-                label="Resource Version"
-                variant="outlined"
+          <Stack direction="row" spacing={3} sx={{ height: 320 }}>
+            {!resouceExistance && (
+              <Box
                 sx={{
-                  flex: 1,
-                  width: "100%",
-                  mb: 2,
-                  backgroundColor: selectedResourceName ? "#393636" : "#2e2e2e",
-                  borderRadius: "5px",
-                  "& .MuiInputBase-input": { color: "white" },
-                  "& .MuiInputLabel-root": { color: "whitesmoke" },
-                  "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+                  width: "40%",
+                  bgcolor: "#393636",
+                  borderRadius: 2,
+                  p: 2,
+                  display: "flex",
+                  flexDirection: "column",
                 }}
-              />
+              >
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Choose Resource Color:
+                </Typography>
+                <Box sx={{ flexGrow: 1, mb: 2 }}>
+                  <HexColorPicker
+                    color={selectedColor}
+                    onChange={setSelectedColor}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                </Box>
+                <FormControl variant="outlined">
+                  <InputLabel
+                    shrink
+                    sx={{
+                      color: "whitesmoke",
+                      "&.Mui-focused": { color: "white" },
+                    }}
+                  >
+                    Hex Color
+                  </InputLabel>
+                  <OutlinedInput
+                    value={selectedColor}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    error={!isValidHex}
+                    sx={{
+                      backgroundColor: "#2e2e2e",
+                      color: "white",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#555" },
+                      "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#888" },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#aaa" },
+                    }}
+                    label="Hex Color"
+                  />
+                </FormControl>
+                <Typography variant="caption" sx={{ mt: 1, display: "block", color: "#ccc" }}>
+                  Selected: {selectedColor}
+                </Typography>
+              </Box>
+            )}
 
-              {/* TITLE */}
+            <Stack spacing={2} sx={{ width: resouceExistance ? "100%" : "60%", height: "100%" }}>
               <TextField
                 disabled={!selectedResourceVersion}
-                value={newResourceTitle}
-                onChange={(event) => {
-                  console.log("Title Written:", event.target.value);
-                  setNewResourceTitle(event.target.value);
-                }}
+                value={newResourceTitle || ""}
+                onChange={(event) => setNewResourceTitle(event.target.value)}
                 label="Resource Title"
                 variant="outlined"
                 sx={{
-                  flex: 1,
-                  width: "100%",
-                  mb: 2,
                   backgroundColor: selectedResourceVersion ? "#393636" : "#2e2e2e",
                   borderRadius: "5px",
                   "& .MuiInputBase-input": { color: "white" },
@@ -366,45 +420,47 @@ export default function CreateDocumentationButton() {
                   "& .MuiInputLabel-root.Mui-focused": { color: "white" },
                 }}
               />
-
-              {/* CONTENT */}
               <TextField
                 disabled={!newResourceTitle}
-                value={newResourceContent}
-                onChange={(event) => {
-                  console.log("Content Written:", event.target.value);
-                  setNewResourceContent(event.target.value);
-                }}
+                value={newResourceContent || ""}
+                onChange={(event) => setNewResourceContent(event.target.value)}
                 label="Resource Content"
                 variant="outlined"
+                multiline
+                rows={9}
                 sx={{
                   flex: 1,
-                  width: "100%",
-                  mb: 2,
-                  backgroundColor: selectedResourceVersion ? "#393636" : "#2e2e2e",
+                  minHeight: 200,
                   borderRadius: "5px",
-                  "& .MuiInputBase-input": { color: "white" },
+                  "& .MuiInputBase-root": {
+                    backgroundColor: selectedResourceVersion ? "#393636" : "#2e2e2e",
+                    borderRadius: "5px",
+                  },
+                  "& .MuiInputBase-inputMultiline": {
+                    color: "white",
+                    backgroundColor: "transparent", // inherits from root
+                  },
                   "& .MuiInputLabel-root": { color: "whitesmoke" },
                   "& .MuiInputLabel-root.Mui-focused": { color: "white" },
                 }}
               />
-
-              {/* POST BUTTON */}
-              <Button
-                variant="outlined"
-                fullWidth
-                disabled={!newResourceContent}
-                sx={{
-                  color: "#ffffff",
-                  borderColor: "#90caf9",
-                  "&:hover": { borderColor: "#64b5f6" },
-                }}
-                onClick={handlePost}
-              >
-                Create Post
-              </Button>
-            </Box>
+            </Stack>
           </Stack>
+
+          <Button
+            variant="outlined"
+            fullWidth
+            disabled={!newResourceContent}
+            sx={{
+              mt: 3,
+              color: "#ffffff",
+              borderColor: "#90caf9",
+              "&:hover": { borderColor: "#64b5f6" },
+            }}
+            onClick={handlePost}
+          >
+            Create Post
+          </Button>
         </Box>
       </Modal>
     </>

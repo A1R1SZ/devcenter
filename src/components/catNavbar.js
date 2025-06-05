@@ -1,13 +1,8 @@
+// CatNavbar.js
 import { AppBar, Box, Tab, Tabs } from '@mui/material';
-import React, { useState } from 'react';
+import React from 'react';
 
-export default function CatNavbar() {
-  const [value, setValue] = useState(0);
-
-  const handleChange = (_, newValue) => {
-    setValue(newValue);
-  };
-
+export default function CatNavbar({ value, onChange }) {
   const tabStyles = (index) => ({
     margin: '2.5px',
     backgroundColor: value === index ? '#ffffff' : 'transparent',
@@ -20,14 +15,7 @@ export default function CatNavbar() {
   });
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        mb: '25px',
-      }}
-    >
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: '25px' }}>
       <AppBar
         position="static"
         sx={{
@@ -41,13 +29,13 @@ export default function CatNavbar() {
       >
         <Tabs
           value={value}
-          onChange={handleChange}
+          onChange={onChange}
           variant="fullWidth"
           centered
           TabIndicatorProps={{ style: { display: 'none' } }}
         >
-          <Tab label="Main Creator Content" sx={tabStyles(0)} />
-          <Tab label="Side Creator Content" sx={tabStyles(1)} />
+          <Tab label="Official Update" sx={tabStyles(0)} />
+          <Tab label="Community Post" sx={tabStyles(1)} />
         </Tabs>
       </AppBar>
     </Box>

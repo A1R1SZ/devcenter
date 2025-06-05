@@ -74,11 +74,13 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
   const renderMedia = () => {
     if (!post.post_graphic) return null;
 
-    if (
-      post.post_graphic.includes("youtube.com") ||
-      post.post_graphic.includes("youtu.be")
-    ) {
-      const embedUrl = getYouTubeEmbedUrl(post.post_graphic);
+    const isExternalUrl = post.post_graphic.startsWith("http");
+    const imageSrc = isExternalUrl
+      ? post.post_graphic
+      : `http://localhost:5000/uploads/${post.post_graphic}`;
+
+    if (imageSrc.includes("youtube.com") || imageSrc.includes("youtu.be")) {
+      const embedUrl = getYouTubeEmbedUrl(imageSrc);
       return (
         <iframe
           width="100%"
@@ -91,7 +93,7 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
           style={{ borderTopLeftRadius: 8, borderTopRightRadius: 8 }}
         />
       );
-    } else if (post.post_graphic.match(/\.(mp4|webm)$/i)) {
+    } else if (imageSrc.match(/\.(mp4|webm)$/i)) {
       return (
         <video
           controls
@@ -103,19 +105,19 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
             borderTopRightRadius: 8,
           }}
         >
-          <source src={post.post_graphic} type="video/mp4" />
+          <source src={imageSrc} type="video/mp4" />
           Your browser does not support the video tag.
         </video>
       );
     } else {
       return (
         <img
-          src={post.post_graphic}
+          src={imageSrc}
           alt="Post visual"
           style={{
             width: "100%",
             height: "400px",
-            objectFit: "cover",
+            objectFit: "contain",
             borderTopLeftRadius: 8,
             borderTopRightRadius: 8,
           }}
@@ -123,6 +125,7 @@ const DevContentModal = ({ post, onClose,   favouriteCounter,commentCounter,book
       );
     }
   };
+
 
   return (
     <Modal open={Boolean(post)} onClose={onClose}>
