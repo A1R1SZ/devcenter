@@ -158,14 +158,14 @@ app.get("/get-profile-info", async (req, res) => {
         const userId = decoded.userId;
 
         const result = await pool.query(
-            "SELECT username, email FROM devUsers WHERE id = $1",
+            "SELECT id,username, email,role FROM devUsers WHERE id = $1",
             [userId]
         );
 
         const user = result.rows[0];
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        res.json({ username: user.username, email: user.email });
+        res.json({ id:user.id,username: user.username, email: user.email,role:user.role });
     } catch (err) {
         console.error("Profile fetch error:", err);
         res.status(500).json({ message: "Server error" });
@@ -829,6 +829,24 @@ app.post('/create-post', authenticateToken, upload.single('resource_graphic'), a
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// DELETE /post/:id
+app.delete('/post/:id', authenticateToken, async (req, res) => {
+  const postId = req.params.id;
+  const userId = req.user.userId;
+
+  const result = await pool.query(
+    'DELETE FROM post WHERE post_id = $1 AND post_author = $2 RETURNING *',
+    [postId, userId]
+  );
+
+  if (result.rowCount === 0) {
+    return res.status(403).json({ message: 'Not authorised to delete this post' });
+  }
+
+  res.json({ message: 'Post deleted successfully' });
+});
+
 
 // Post Extra Functionality //
 

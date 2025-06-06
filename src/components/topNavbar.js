@@ -9,23 +9,21 @@ import SideNavbar from './sideNavbar';
 import Searchbar from './searchbar';
 import CreateContentButton from './createContentButton';
 import CreateDocumentationButton from './createDocumentButton';
-import { useRole } from '../data/roleData';
 import CreateTagsButton from './createTagsButton';
 import { UserContext } from '../contexts/UserContext';
 
 export default function TopNavbar() {
-  const { username } = useContext(UserContext);
+  const { username, role } = useContext(UserContext);
   const location = useLocation();
 
   const toggleSideNavbar = () => setOpen((prev) => !prev);
   const [open, setOpen] = useState(false);
 
-  const { role } = useRole();
   const isHomePage = location.pathname === '/homepage';
   const isDocumenationPage = location.pathname === '/documentation';
   const isTagsPage = location.pathname === '/tags';
   const isProfilePage = location.pathname === '/profile';
-  const isModerator = role === 'moderator';
+  const isAdmin = role === 'moderator';
 
   return (
     <>
@@ -58,8 +56,8 @@ export default function TopNavbar() {
             <Searchbar />
 
             {(isHomePage || isProfilePage) && <CreateContentButton />}
-            {isDocumenationPage && isModerator && <CreateDocumentationButton />}
-            {isTagsPage && isModerator && <CreateTagsButton />}
+            {isDocumenationPage && isAdmin && <CreateDocumentationButton />}
+            {isTagsPage && isAdmin && <CreateTagsButton />}
 
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <IconButton size="large" color="inherit" sx={{ ml: 2 }}>

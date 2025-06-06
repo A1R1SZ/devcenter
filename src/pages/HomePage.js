@@ -13,28 +13,29 @@ function HomePage() {
     const [contents, setContents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedPost, setSelectedPost] = useState(null);
-    const [currentUser, setCurrentUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState({ id: null, role: null });
+    const [token, setToken] = useState(null);
     const [selectedTab, setSelectedTab] = useState(0);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    
+
+    const navigate = useNavigate();
 
     const updatePostInList = (updatedPost) => {
-    setContents(prev =>
-        prev.map(post =>
-        Number(post.post_id) === Number(updatedPost.post_id)? { ...post, ...updatedPost } : post
-        )
-    );
+        setContents(prev =>
+            prev.map(post =>
+                Number(post.post_id) === Number(updatedPost.post_id) ? { ...post, ...updatedPost } : post
+            )
+        );
     };
 
-
-    const handleTabChange = ( _, newValue) =>{
+    const handleTabChange = (_, newValue) => {
         setSelectedTab(newValue);
-    }
+    };
 
     const filteredContents = useMemo(() => {
-    return contents.filter(item =>
-        selectedTab === 0 ? item.post_type === 'Official' : item.post_type === 'Unofficial'
-    );
+        return contents.filter(item =>
+            selectedTab === 0 ? item.post_type === 'Official' : item.post_type === 'Unofficial'
+        );
     }, [contents, selectedTab]);
 
     const today = new Date().toLocaleDateString('en-GB', {
@@ -43,56 +44,57 @@ function HomePage() {
         year: 'numeric',
     });
 
-    const navigate = useNavigate();
-
-            const fetchContents = async () => {
-            const token = localStorage.getItem("token");
-            if (!token) return;
-
-            try {
-                const response = await axios.get('http://localhost:5000/post', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-                setContents(response.data);
-            } catch (err) {
-                console.error('Failed to fetch contents', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
+    // ✅ Set token once and redirect if missing
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            navigate("/"); // Redirect to login if not logged in
+        const storedToken = localStorage.getItem("token");
+        if (!storedToken) {
+            navigate("/");
+        } else {
+            setToken(storedToken);
         }
     }, [navigate]);
 
-    useEffect(() => {
-        fetchContents();
-    }, []);
-
+    // ✅ Fetch user after token is ready
     useEffect(() => {
         const fetchUser = async () => {
             const token = localStorage.getItem("token");
             if (!token) return;
 
             try {
-                const response = await axios.get("http://localhost:5000/api/user/profile", {
+                const response = await axios.get("http://localhost:5000/get-profile-info", {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
                 });
-                setCurrentUser(response.data.username);
+                console.log("✅ profile data:", response.data);
+                setCurrentUser({ id: response.data.id, role: response.data.role });
             } catch (err) {
-                console.error("Failed to fetch user", err);
+                console.error("❌ Failed to fetch user", err);
             }
         };
 
         fetchUser();
     }, []);
+
+    // ✅ Fetch post contents after token is ready
+    useEffect(() => {
+        if (!token) return;
+
+        const fetchContents = async () => {
+            try {
+                const response = await axios.get('http://localhost:5000/post', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                setContents(response.data);
+            } catch (err) {
+                console.error('❌ Failed to fetch contents', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchContents();
+    }, [token]);
 
     return (
         <>
@@ -145,7 +147,7 @@ function HomePage() {
                             overflowY: 'auto',
                         }}
                     >
-                        <CatNavbar  value={selectedTab} onChange={handleTabChange}/>
+                        <CatNavbar value={selectedTab} onChange={handleTabChange} />
 
                         {loading ? (
                             <Typography color="white" sx={{ textAlign: 'center', marginTop: '50px' }}>
@@ -172,17 +174,19 @@ function HomePage() {
                                     category={item.post_type}
                                     content={item.post_content}
                                     username={item.author_username}
-                                    currentUser={currentUser}
+                                    currentUserId={currentUser.id}
+                                    currentUserRole={currentUser.role}
                                     commentCounter={item.post_comment}
                                     postImage={
-                                    item.post_graphic
-                                        ? item.post_graphic.startsWith("http")
-                                        ? item.post_graphic // online image
-                                        : `http://localhost:5000/uploads/${item.post_graphic}` // local image
-                                        : null
+                                        item.post_graphic
+                                            ? item.post_graphic.startsWith("http")
+                                                ? item.post_graphic
+                                                : `http://localhost:5000/uploads/${item.post_graphic}`
+                                            : null
                                     }
                                     resource_color={item.resource_color}
                                     resource_version={item.resource_version}
+                                    postAuthorId={item.post_author}
                                 />
                             ))
                         )}
@@ -190,27 +194,28 @@ function HomePage() {
                             <DevContentModal
                                 post={selectedPost}
                                 onClose={async () => {
-                                try {
-                                    const token = localStorage.getItem('token');
-                                    const response = await axios.get('http://localhost:5000/post', {
-                                    headers: { Authorization: `Bearer ${token}` },
-                                    });
+                                    try {
+                                        const response = await axios.get('http://localhost:5000/post', {
+                                            headers: { Authorization: `Bearer ${token}` },
+                                        });
 
-                                    const freshData = response.data;
+                                        const freshData = response.data;
 
-                                    // 💣 Nuclear soft refresh: clear first, then reset
-                                    setContents([]); 
-                                    setTimeout(() => {
-                                    setContents(freshData); 
-                                    setRefreshTrigger(prev => prev + 1); // 🔄 trigger re-render via new key
-                                    }, 50);
+                                        setContents([]);
+                                        setTimeout(() => {
+                                            setContents(freshData);
+                                            setRefreshTrigger(prev => prev + 1);
+                                        }, 50);
 
-                                    setSelectedPost(null); // Close modal
-                                } catch (err) {
-                                    console.error('Failed to refresh after modal close', err);
-                                    setSelectedPost(null);
-                                }
+                                        setSelectedPost(null);
+                                    } catch (err) {
+                                        console.error('Failed to refresh after modal close', err);
+                                        setSelectedPost(null);
+                                    }
                                 }}
+                                onPostDelete={(deletedId) =>
+                                    setContents((prev) => prev.filter((post) => post.post_id !== deletedId))
+                                }
                                 openForumInitially={selectedPost.openForum}
                                 favouriteCounter={selectedPost.post_like_count}
                                 bookmarkCounter={selectedPost.post_bookmark_count}

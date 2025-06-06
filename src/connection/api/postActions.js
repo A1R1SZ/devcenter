@@ -25,3 +25,10 @@ export const getPostComments = async (postId, token) => {
     headers: { Authorization: `Bearer ${token}` }
   });
 };
+
+export const deletePost = async (postId, token) => {
+  const response = await axios.delete(`${BASE_URL}/post/${postId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};

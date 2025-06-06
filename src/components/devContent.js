@@ -12,8 +12,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import CommentIcon from '@mui/icons-material/Comment';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { likePost, bookmarkPost } from '../connection/api/postActions';
-import { useRole } from '../data/roleData';
+import { likePost, bookmarkPost, deletePost } from '../connection/api/postActions';
 
 function getYouTubeEmbedUrl(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -29,7 +28,8 @@ export default function DevContent({
   category,
   content,
   username,
-  currentUser,
+  currentUserId,
+  currentUserRole,
   commentCounter,
   postImage,
   resource_color,
@@ -40,6 +40,8 @@ export default function DevContent({
   isBookmarked,
   favouriteCounter,
   bookmarkCounter,
+  onPostDelete,
+  postAuthorId,
 }) {
   const [isCommentActive, setIsCommentActive] = useState(false);
   const [isFavoriteActive, setIsFavoriteActive] = useState(isLiked);
@@ -48,7 +50,6 @@ export default function DevContent({
   const [bookmarks, setBookmarks] = useState(Number(bookmarkCounter) || 0);
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  const { role } = useRole();
 
   const handleClick = (event) => {
     event.stopPropagation();
@@ -88,9 +89,11 @@ export default function DevContent({
   
 
 
-  const isOwner = currentUser === username;
-  const isModerator = role === 'moderator';
-
+  const isOwner = currentUserId === postAuthorId;
+  const isAdmin = currentUserRole === 'moderator';
+  console.log("currentUser ID:", currentUserId, "postAuthor ID:", postAuthorId);
+  console.log("role:", currentUserRole, "isAdmin:", isAdmin);
+  // console.log('currentUser:', currentUser, 'postAuthor:', username, 'isOwner:', isOwner);
   const SocialActions = () => (
     <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 2, mt: 2 }}>
       <IconButton onClick={handleLike}>
@@ -187,13 +190,28 @@ export default function DevContent({
             }
           }}
         >
-          {isModerator && <MenuItem onClick={handleClose}>Remove Content</MenuItem>}
-          {isOwner && (
-            <>
-              <MenuItem onClick={handleClose}>Edit</MenuItem>
-              <MenuItem onClick={handleClose}>Delete</MenuItem>
-            </>
-          )}
+          {isAdmin && <MenuItem onClick={handleClose}>Remove Content</MenuItem>}
+          {isOwner && [
+            <MenuItem key="edit" onClick={handleClose}>Edit</MenuItem>,
+            <MenuItem
+              key="delete"
+              onClick={async (e) => {
+                e.stopPropagation();
+                handleClose();
+                const token = localStorage.getItem('token');
+                try {
+                  await deletePost(postId, token);
+                  if (typeof onPostDelete === 'function') {
+                    onPostDelete(postId);
+                  }
+                } catch (err) {
+                  console.error("Error deleting post", err);
+                }
+              }}
+            >
+              Delete
+            </MenuItem>
+          ]}
           <MenuItem onClick={handleClose}>Share</MenuItem>
           <MenuItem onClick={handleClose}>Report</MenuItem>
         </Menu>

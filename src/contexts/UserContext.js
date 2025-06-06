@@ -6,7 +6,8 @@ export const UserContext = createContext();
 export const UserProvider = ({ children }) => {
   const [username, setUsername] = useState('');
   const [token, setToken] = useState(null);
-  const [userID, setUserID] = useState(null); // Add userID
+  const [userID, setUserID] = useState(null);
+  const [role, setRole] = useState(''); // ✅ Add role
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -14,7 +15,7 @@ export const UserProvider = ({ children }) => {
       setToken(storedToken);
       try {
         const decoded = jwtDecode(storedToken);
-        if (decoded.userID) setUserID(decoded.userID); // Option 1
+        if (decoded.userID) setUserID(decoded.userID);
 
         fetch('http://localhost:5000/get-profile-info', {
           headers: {
@@ -23,8 +24,15 @@ export const UserProvider = ({ children }) => {
         })
           .then((res) => res.json())
           .then((data) => {
+            console.log("✅ Profile Info Received:", data); // 🔍 DEBUG
             if (data.username) setUsername(data.username);
-            if (data.userID) setUserID(data.userID); // Option 2
+            if (data.id) setUserID(data.id);
+            if (data.role) {
+              console.log("✅ Setting Role:", data.role);  // 🔍 DEBUG
+              setRole(data.role);
+            } else {
+              console.warn("⚠️ No role found in profile info");
+            }
           });
       } catch (err) {
         console.error('Invalid token', err);
@@ -34,7 +42,16 @@ export const UserProvider = ({ children }) => {
 
   return (
     <UserContext.Provider
-      value={{ username, setUsername, token, setToken, userID, setUserID }}
+      value={{
+        username,
+        setUsername,
+        token,
+        setToken,
+        userID,
+        setUserID,
+        role,  
+        setRole
+      }}
     >
       {children}
     </UserContext.Provider>
