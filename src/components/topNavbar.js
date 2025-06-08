@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AppBar, Box, Toolbar, IconButton, Typography } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PersonIcon from '@mui/icons-material/Person';
-import { jwtDecode } from 'jwt-decode';
 import SideNavbar from './sideNavbar';
 import Searchbar from './searchbar';
 import CreateContentButton from './createContentButton';
@@ -15,9 +14,8 @@ import { UserContext } from '../contexts/UserContext';
 export default function TopNavbar() {
   const { username, role } = useContext(UserContext);
   const location = useLocation();
-
-  const toggleSideNavbar = () => setOpen((prev) => !prev);
   const [open, setOpen] = useState(false);
+  const toggleSideNavbar = () => setOpen((prev) => !prev);
 
   const isHomePage = location.pathname === '/homepage';
   const isDocumenationPage = location.pathname === '/documentation';
@@ -29,16 +27,14 @@ export default function TopNavbar() {
     <>
       <SideNavbar open={open} toggleSideNavbar={toggleSideNavbar} />
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static" sx={{ backgroundColor: '#393636', p: '7.5px' }}>
-          <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <AppBar position="static" sx={{ backgroundColor: '#393636', px: 2, py: 1 }}>
+          <Toolbar sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton
               size="large"
               edge="start"
               color="inherit"
-              aria-label="open drawer"
               onClick={toggleSideNavbar}
               sx={{
-                mr: 2,
                 backgroundColor: '#555',
                 borderRadius: '8px',
                 transition: '0.3s',
@@ -55,18 +51,18 @@ export default function TopNavbar() {
 
             <Searchbar />
 
-            {(isHomePage || isProfilePage) && <CreateContentButton />}
+            {isHomePage || isProfilePage ? <CreateContentButton /> : null}
             {isDocumenationPage && isAdmin && <CreateDocumentationButton />}
             {isTagsPage && isAdmin && <CreateTagsButton />}
 
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <IconButton size="large" color="inherit" sx={{ ml: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto', gap: 1 }}>
+              <IconButton size="large" color="inherit">
                 <NotificationsIcon />
               </IconButton>
-              <Typography variant="h6" noWrap sx={{ color: 'white', mx: 1 }}>
+              <Typography variant="subtitle1" sx={{ color: 'white' }}>
                 {username}
               </Typography>
-              <IconButton size="large" color="inherit" sx={{ ml: 1 }}>
+              <IconButton size="large" color="inherit">
                 <PersonIcon />
               </IconButton>
             </Box>

@@ -245,7 +245,7 @@ const handlePost = async () => {
             <Typography variant="h6"> Select Resource Type</Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Button variant="contained" onClick={() =>{ setFirstModal(false);setSecondModal(true);setContentType("Official")}}>Main Content</Button>
-              <Button variant="contained" onClick={() =>{ setFirstModal(false);setSecondModal(true);setContentType("Unofficial ")}}>Secondary Content</Button>
+              <Button variant="contained" onClick={() =>{ setFirstModal(false);setSecondModal(true);setContentType("Unofficial")}}>Secondary Content</Button>
             </Box>
           </Box>
         </Modal>

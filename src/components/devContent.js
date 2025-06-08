@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Card,
@@ -6,13 +6,15 @@ import {
   Typography,
   IconButton,
   Menu,
-  MenuItem
+  MenuItem,
+  Popover
 } from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import CommentIcon from '@mui/icons-material/Comment';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { likePost, bookmarkPost, deletePost } from '../connection/api/postActions';
+import { useNavigate } from 'react-router-dom';
 
 function getYouTubeEmbedUrl(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -42,6 +44,8 @@ export default function DevContent({
   bookmarkCounter,
   onPostDelete,
   postAuthorId,
+  resource_tag,
+  postDate,
 }) {
   const [isCommentActive, setIsCommentActive] = useState(false);
   const [isFavoriteActive, setIsFavoriteActive] = useState(isLiked);
@@ -51,6 +55,25 @@ export default function DevContent({
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
+  const [infoAnchorEl, setInfoAnchorEl] = useState(null);
+
+  const navigate = useNavigate();
+  
+  const handleAuthorClick = (e) => {
+    e.stopPropagation();
+    navigate(`/profile/${postAuthorId}`);
+  };
+
+    const formattedDate = postDate
+    ? new Date(postDate).toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : '';
+
+
+  
   const handleClick = (event) => {
     event.stopPropagation();
     setAnchorEl(event.currentTarget);
@@ -117,7 +140,7 @@ export default function DevContent({
     </Box>
   );
 
-  const hasMedia = !!postImage;
+  const hasMedia = postImage && postImage !== 'null' && postImage.trim() !== '';
 
   return (
     <>
@@ -134,15 +157,33 @@ export default function DevContent({
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box onClick={(e) => setInfoAnchorEl(e.currentTarget)}>
           <Typography sx={{ color: 'black', fontWeight: 600, fontSize: 15 }}>
             {resource_name}
           </Typography>
-        <Divider orientation="vertical" flexItem sx={{ mx: 2, backgroundColor: 'black' }} />
+        </Box>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 2, backgroundColor: 'black' }} />
+
+        <Box onClick={(e) => setInfoAnchorEl(e.currentTarget)}>
           <Typography sx={{ fontWeight: 600, fontSize: 15 }}>
             {resource_version || 'Unknown'}
           </Typography>
+        </Box>
           <Divider orientation="vertical" flexItem sx={{ mx: 2, backgroundColor: 'black' }} />
-          <Typography sx={{ fontWeight: 600, fontSize: 15 }}>
+          <Box onClick={(e) => setInfoAnchorEl(e.currentTarget)}>
+            <Typography sx={{ fontWeight: 600, fontSize: 15 }}>
+              {resource_tag || 'No Tag'}
+            </Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem sx={{ mx: 2, backgroundColor: 'black' }} />
+          <Typography
+            sx={{ fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/profile/${postAuthorId}`);
+            }}
+          >
             @{username || 'Unknown'}
           </Typography>
         </Box>
@@ -156,10 +197,12 @@ export default function DevContent({
           borderColor: resource_color,
           borderRadius: '0 0 5px 5px',
           position: 'relative',
-          display: hasMedia ? 'flex' : 'block',
+          display: 'flex',
           flexDirection: hasMedia ? 'row' : 'column',
+          alignItems: hasMedia ? 'stretch' : 'flex-start',
+          height: 'auto',
+          minHeight: hasMedia ? '250px' : 'unset',
           overflow: 'hidden',
-          height: hasMedia ? '250px' : 'auto',
           cursor: 'pointer'
         }}
         onClick={() => onClick(false)}
@@ -217,7 +260,7 @@ export default function DevContent({
         </Menu>
 
         {hasMedia && (
-          <Box sx={{ width: '300px', height: '100%', flexShrink: 0 }}>
+          <Box sx={{ width: hasMedia ? '300px' : '0px', height: '100%', flexShrink: 0, display: hasMedia ? 'block' : 'none' }}>
             {postImage.includes('youtube.com') || postImage.includes('youtu.be') ? (
               <iframe
                 width="100%"
@@ -275,8 +318,54 @@ export default function DevContent({
             {content}
           </Typography>
           <SocialActions />
+          {/* ✅ Display date at bottom right */}
+          {formattedDate && (
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 8,
+                right: 16,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: 'grey',
+                  fontSize: '11px',
+                }}
+              >
+                {formattedDate}
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Card>
+
+      <Popover
+        open={Boolean(infoAnchorEl)}
+        anchorEl={infoAnchorEl}
+        onClose={() => setInfoAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: {
+              p: 2,
+              maxWidth: 300,
+              backgroundColor: '#333',
+              color: 'white',
+              borderRadius: 2,
+            },
+          },
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+          Resource Details
+        </Typography>
+        <Typography variant="body2">
+          <strong>Name:</strong> {resource_name}<br />
+          <strong>Version:</strong> {resource_version || 'Unknown'}
+        </Typography>
+      </Popover>
     </>
   );
 }

@@ -9,6 +9,7 @@ import TagsPage from '../pages/TagsPage';
 import AnalyticsPage from '../pages/AnalyticsPage';
 import SettingsPage from '../pages/SettingsPage';
 import PrivateRoute from '../connection/privateRouter';
+import SearchResultsPage from '../pages/SearchResultsPage';
 
 function AppRoutes() {
   return (
@@ -26,6 +27,14 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
+      <Route 
+        path="/search" 
+        element={
+          <PrivateRoute>
+            <SearchResultsPage/>
+            </PrivateRoute>
+          } 
+      />
       <Route
         path="/tags"
         element={
@@ -41,6 +50,14 @@ function AppRoutes() {
             <ProfilePage />
           </PrivateRoute>
         }
+      />
+      <Route 
+        path="/profile/:userId" 
+        element={
+          <PrivateRoute>
+            <ProfilePage />
+          </PrivateRoute>
+        } 
       />
       <Route
         path="/analytics"
@@ -67,6 +84,7 @@ function AppRoutes() {
         }
       />
     </Routes>
+    
   );
 }
 

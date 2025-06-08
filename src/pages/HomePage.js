@@ -187,6 +187,8 @@ function HomePage() {
                                     resource_color={item.resource_color}
                                     resource_version={item.resource_version}
                                     postAuthorId={item.post_author}
+                                    resource_tag={item.resource_tag_name}
+                                    postDate={item.post_created_at}
                                 />
                             ))
                         )}

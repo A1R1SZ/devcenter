@@ -683,6 +683,103 @@ app.get('/post', authenticateToken, async (req, res) => {
   }
 });
 
+app.get('/get-user-posts', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        post.*, 
+        tag.resource_tag_name, 
+        devusers.username AS author_username, 
+        documentation.resource_name AS resource_title,
+        documentation.resource_version AS resource_version,
+        color.resource_color,
+
+        COUNT(DISTINCT post_like.like_id) AS post_like_count,
+        COUNT(DISTINCT post_bookmark.bookmark_id) AS post_bookmark_count,
+
+        COUNT(DISTINCT user_likes.like_id) > 0 AS is_liked,
+        COUNT(DISTINCT user_bookmarks.bookmark_id) > 0 AS is_bookmarked,
+
+        (
+          SELECT COUNT(*) FROM post_comment WHERE post_comment.post_id = post.post_id
+        ) AS post_comment
+
+      FROM post
+      JOIN tag ON post.post_tag = tag.tag_id
+      JOIN devusers ON post.post_author = devusers.id
+      JOIN documentation ON post.post_resource = documentation.id
+      LEFT JOIN color ON documentation.resource_name = color.resource_name
+
+      LEFT JOIN post_like ON post.post_id = post_like.post_id
+      LEFT JOIN post_bookmark ON post.post_id = post_bookmark.post_id
+
+      LEFT JOIN post_like AS user_likes 
+        ON post.post_id = user_likes.post_id AND user_likes.user_id = $1
+
+      LEFT JOIN post_bookmark AS user_bookmarks 
+        ON post.post_id = user_bookmarks.post_id AND user_bookmarks.user_id = $1
+
+      WHERE post.post_author = $1
+
+      GROUP BY 
+        post.post_id, 
+        tag.resource_tag_name, 
+        devusers.username, 
+        documentation.resource_name, 
+        documentation.resource_version, 
+        color.resource_color
+
+      ORDER BY post.post_created_at DESC;
+    `, [userId]);
+
+    res.status(200).json({ posts: result.rows });
+  } catch (err) {
+    console.error('Error fetching user posts:', err);
+    res.status(500).json({ message: 'Server error fetching user posts' });
+  }
+});
+
+app.get('/get-user-posts/:id', authenticateToken, async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        post.*, 
+        devusers.username AS author_username,
+        tag.resource_tag_name,
+        documentation.resource_name AS resource_title,
+        documentation.resource_version,
+        color.resource_color
+
+      FROM post
+      JOIN devusers ON post.post_author = devusers.id
+      JOIN tag ON post.post_tag = tag.tag_id
+      JOIN documentation ON post.post_resource = documentation.id
+      LEFT JOIN color ON documentation.resource_name = color.resource_name
+
+      WHERE post.post_author = $1
+      ORDER BY post.post_created_at DESC
+    `, [userId]);
+
+    const usernameResult = await pool.query(
+      'SELECT username FROM devusers WHERE id = $1', [userId]
+    );
+
+    res.json({
+      username: usernameResult.rows[0]?.username || 'Unknown',
+      posts: result.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to retrieve posts' });
+  }
+});
+
+
+
 app.get('/post/:id', authenticateToken, async (req, res) => {
   const postId = req.params.id;
   const userId = req.user.userId;
@@ -949,6 +1046,63 @@ app.get('/post/:postId/comments', async (req, res) => {
   } catch (err) {
     console.error("Fetch Comments Error:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get('/search', authenticateToken, async (req, res) => {
+  const query = req.query.q;
+
+  if (!query || query.trim() === "") {
+    return res.status(400).json({ message: "Missing search query" });
+  }
+
+  const q = `%${query.toLowerCase()}%`;
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        post.post_id,
+        post.post_title,
+        post.post_content,
+        post.post_graphic,
+        post.post_author,
+        tag.resource_tag_name,
+        documentation.resource_name,
+        documentation.resource_version,
+        color.resource_color,
+        devusers.username AS author_username,
+        post.post_type,
+
+        -- Interaction counts
+        (SELECT COUNT(*) FROM post_like WHERE post_like.post_id = post.post_id) AS post_like_count,
+        (SELECT COUNT(*) FROM post_bookmark WHERE post_bookmark.post_id = post.post_id) AS post_bookmark_count,
+        (SELECT COUNT(*) FROM post_comment WHERE post_comment.post_id = post.post_id) AS post_comment,
+
+        -- Current user interactions
+        EXISTS (
+          SELECT 1 FROM post_like WHERE post_like.post_id = post.post_id AND post_like.user_id = $2
+        ) AS is_liked,
+        EXISTS (
+          SELECT 1 FROM post_bookmark WHERE post_bookmark.post_id = post.post_id AND post_bookmark.user_id = $2
+        ) AS is_bookmarked
+
+      FROM post
+      JOIN devusers ON post.post_author = devusers.id
+      JOIN documentation ON post.post_resource = documentation.id
+      JOIN tag ON post.post_tag = tag.tag_id
+      LEFT JOIN color ON documentation.resource_name = color.resource_name
+      WHERE 
+        LOWER(post.post_title) LIKE $1 OR 
+        LOWER(devusers.username) LIKE $1 OR 
+        LOWER(tag.resource_tag_name) LIKE $1 OR
+        LOWER(documentation.resource_name) LIKE $1
+      ORDER BY post.post_created_at DESC
+    `, [q, req.user.userId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).json({ message: "Server error during search" });
   }
 });
 
