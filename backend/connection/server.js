@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const pool = require("./database");
 const authenticateToken = require("./authMiddleware");
 const analyticsRoutes = require('./routes/analyticsRoutes');
