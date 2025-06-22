@@ -16,7 +16,7 @@ function ProfilePage() {
 
     if (userId) {
         // Visiting someone else's profile
-        fetch(`http://localhost:5000/get-user-posts/${userId}`, {
+        fetch(`https://devcenter-kofh.onrender.com/get-user-posts/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => res.json())
@@ -30,7 +30,7 @@ function ProfilePage() {
         try {
         const decoded = jwtDecode(token);
         setUsername(decoded.username || 'User');
-        fetch(`http://localhost:5000/get-user-posts/${decoded.userId}`, {
+        fetch(`https://devcenter-kofh.onrender.com/get-user-posts/${decoded.userId}`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then((res) => res.json())

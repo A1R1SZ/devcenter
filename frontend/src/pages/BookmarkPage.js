@@ -38,7 +38,7 @@ function BookmarkPage() {
       if (!token) return;
 
       try {
-        const response = await axios.get("http://localhost:5000/get-profile-info", {
+        const response = await axios.get("https://devcenter-kofh.onrender.com/get-profile-info", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser({ id: response.data.id, role: response.data.role });
@@ -55,7 +55,7 @@ function BookmarkPage() {
 
     const fetchBookmarked = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/bookmarks', {
+        const response = await axios.get('https://devcenter-kofh.onrender.com/bookmarks', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBookmarkedContents(response.data);
@@ -152,7 +152,7 @@ function BookmarkPage() {
                         item.post_graphic
                         ? item.post_graphic.startsWith("http")
                             ? item.post_graphic
-                            : `http://localhost:5000/uploads/${item.post_graphic}`
+                            : `https://devcenter-kofh.onrender.com/uploads/${item.post_graphic}`
                         : null
                     }
                   resource_color={item.resource_color}

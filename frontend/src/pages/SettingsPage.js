@@ -45,7 +45,7 @@ function SettingsPage() {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const response = await fetch("http://localhost:5000/get-profile-info", {
+        const response = await fetch("https://devcenter-kofh.onrender.com/get-profile-info", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -70,7 +70,7 @@ function SettingsPage() {
     }
   
     try {
-      const response = await fetch("http://localhost:5000/delete-account", {
+      const response = await fetch("https://devcenter-kofh.onrender.com/delete-account", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -112,7 +112,7 @@ function SettingsPage() {
     }
   
     try {
-      const response = await fetch("http://localhost:5000/update-profile", {
+      const response = await fetch("https://devcenter-kofh.onrender.com/update-profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

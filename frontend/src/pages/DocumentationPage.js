@@ -32,7 +32,7 @@ function DocumentationPage() {
 
   const handleDelete = async () => {
     try {
-      const response = await axios.delete("http://localhost:5000/delete-documentation", {
+      const response = await axios.delete("https://devcenter-kofh.onrender.com/delete-documentation", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -57,7 +57,7 @@ function DocumentationPage() {
   
   const handleSave = async () => {
     try {
-      const response = await axios.put("http://localhost:5000/edit-documentation", {
+      const response = await axios.put("https://devcenter-kofh.onrender.com/edit-documentation", {
         resourceContent: editedContent,
         resourceName: selectedResourceName,
         resourceVersion: selectedResourceVersion,
@@ -85,7 +85,7 @@ function DocumentationPage() {
 
   const handleFollow = async () => {
     try {
-      const res = await axios.post('http://localhost:5000/follow-resource', {
+      const res = await axios.post('https://devcenter-kofh.onrender.com/follow-resource', {
         selectedResources: selectedResourceName,
         selectedVersion: selectedResourceVersion
       }, {
@@ -105,7 +105,7 @@ function DocumentationPage() {
     if (!selectedResourceName || !selectedResourceVersion) return;
 
     try {
-      const res = await axios.get('http://localhost:5000/check-follow-status', {
+      const res = await axios.get('https://devcenter-kofh.onrender.com/check-follow-status', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -133,7 +133,7 @@ function DocumentationPage() {
     if (selectedResourceType) {
       setResourceName(null);
       setResourceVersion(null);
-      axios.get("http://localhost:5000/documentation/names", {
+      axios.get("https://devcenter-kofh.onrender.com/documentation/names", {
         params: { resourceType: selectedResourceType }
       })
       .then(res => setResourceNameOptions(res.data))
@@ -144,7 +144,7 @@ function DocumentationPage() {
   useEffect(() => {
     if (selectedResourceType && selectedResourceName) {
       setResourceVersion(null);
-      axios.get("http://localhost:5000/documentation/versions", {
+      axios.get("https://devcenter-kofh.onrender.com/documentation/versions", {
         params: {
           resourceType: selectedResourceType,
           resourceName: selectedResourceName
@@ -153,7 +153,7 @@ function DocumentationPage() {
       .then(res => setResourceVersionOptions(res.data))
       .catch(err => console.error("Failed to fetch versions:", err));
 
-      axios.get("http://localhost:5000/color", {
+      axios.get("https://devcenter-kofh.onrender.com/color", {
         params: {
           resourceName: selectedResourceName
         }
@@ -172,7 +172,7 @@ function DocumentationPage() {
 
   useEffect(() => {
     if (selectedResourceType && selectedResourceName && selectedResourceVersion) {
-      axios.get("http://localhost:5000/documentation/filter", {
+      axios.get("https://devcenter-kofh.onrender.com/documentation/filter", {
         params: {
           resourceType: selectedResourceType,
           resourceName: selectedResourceName,

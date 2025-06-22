@@ -47,7 +47,7 @@ export default function SearchResultsPage() {
       if (!token) return;
 
       try {
-        const response = await axios.get('http://localhost:5000/get-profile-info', {
+        const response = await axios.get('https://devcenter-kofh.onrender.com/get-profile-info', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser({ id: response.data.id, role: response.data.role });
@@ -64,7 +64,7 @@ export default function SearchResultsPage() {
 
     const fetchResults = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/search?q=${query}`, {
+        const res = await axios.get(`https://devcenter-kofh.onrender.com/search?q=${query}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setResults(res.data);
@@ -160,7 +160,7 @@ export default function SearchResultsPage() {
                     post.post_graphic
                       ? post.post_graphic.startsWith('http')
                         ? post.post_graphic
-                        : `http://localhost:5000/uploads/${post.post_graphic}`
+                        : `https://devcenter-kofh.onrender.com/uploads/${post.post_graphic}`
                       : null
                   }
                   resource_color={post.resource_color}
@@ -177,7 +177,7 @@ export default function SearchResultsPage() {
                 post={selectedPost}
                 onClose={async () => {
                   try {
-                    const res = await axios.get(`http://localhost:5000/search?q=${query}`, {
+                    const res = await axios.get(`https://devcenter-kofh.onrender.com/search?q=${query}`, {
                       headers: { Authorization: `Bearer ${token}` },
                     });
 

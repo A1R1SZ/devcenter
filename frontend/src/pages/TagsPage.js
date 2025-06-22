@@ -22,7 +22,7 @@ export default function TagsPage() {
     if (selectedResourceType) {
       setResourceName(null);
       setResourceVersion(null);
-      axios.get("http://localhost:5000/documentation/names", {
+      axios.get("https://devcenter-kofh.onrender.com/documentation/names", {
         params: { resourceType: selectedResourceType }
       })
       .then(res => setResourceNameOptions(res.data))
@@ -33,7 +33,7 @@ export default function TagsPage() {
   useEffect(() => {
     if (selectedResourceType && selectedResourceName) {
       setResourceVersion(null);
-      axios.get("http://localhost:5000/documentation/versions", {
+      axios.get("https://devcenter-kofh.onrender.com/documentation/versions", {
         params: {
           resourceType: selectedResourceType,
           resourceName: selectedResourceName
@@ -46,7 +46,7 @@ export default function TagsPage() {
 
   useEffect(() => {
     if (selectedResourceName && selectedResourceVersion) {
-      axios.get("http://localhost:5000/tag-filter", {
+      axios.get("https://devcenter-kofh.onrender.com/tag-filter", {
         params: {
           resourceName: selectedResourceName,
           resourceVersion: selectedResourceVersion,
@@ -75,7 +75,7 @@ export default function TagsPage() {
     if (selectedTags.length === 0) return;
 
     try {
-      const response = await axios.delete("http://localhost:5000/delete-tag", {
+      const response = await axios.delete("https://devcenter-kofh.onrender.com/delete-tag", {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -106,7 +106,7 @@ export default function TagsPage() {
     const newName = editedContent.trim();
 
     try {
-      const response = await axios.put("http://localhost:5000/edit-tag", {
+      const response = await axios.put("https://devcenter-kofh.onrender.com/edit-tag", {
         selectedResources: selectedResourceName,
         selectedVersion: selectedResourceVersion,
         tagsToEdit: [{ oldName, newName }]

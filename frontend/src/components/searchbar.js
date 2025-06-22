@@ -49,7 +49,7 @@ export default function Searchbar() {
     if (query.trim().length > 1) {
       const token = localStorage.getItem('token');
       axios
-        .get(`http://localhost:5000/search?q=${query}`, {
+        .get(`https://devcenter-kofh.onrender.com/search?q=${query}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setSuggestions(res.data.slice(0, 5)))

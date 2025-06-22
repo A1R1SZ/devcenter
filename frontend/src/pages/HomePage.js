@@ -66,8 +66,8 @@ function HomePage() {
         try {
             const endpoint =
                 selectedTab === 1
-                    ? 'http://localhost:5000/following-resources-posts'
-                    : 'http://localhost:5000/post';
+                    ? 'https://devcenter-kofh.onrender.com/following-resources-posts'
+                    : 'https://devcenter-kofh.onrender.com/post';
 
             const response = await axios.get(endpoint, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -92,7 +92,7 @@ function HomePage() {
             if (!token) return;
 
             try {
-                const response = await axios.get("http://localhost:5000/get-profile-info", {
+                const response = await axios.get("https://devcenter-kofh.onrender.com/get-profile-info", {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
@@ -113,7 +113,7 @@ function HomePage() {
 
         const fetchContents = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/post', {
+                const response = await axios.get('https://devcenter-kofh.onrender.com/post', {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setContents(response.data);
@@ -212,7 +212,7 @@ function HomePage() {
                                         item.post_graphic
                                             ? item.post_graphic.startsWith("http")
                                                 ? item.post_graphic
-                                                : `http://localhost:5000/uploads/${item.post_graphic}`
+                                                : `https://devcenter-kofh.onrender.com/uploads/${item.post_graphic}`
                                             : null
                                     }
                                     resource_color={item.resource_color}
@@ -230,7 +230,7 @@ function HomePage() {
                                 post={selectedPost}
                                 onClose={async () => {
                                     try {
-                                        const response = await axios.get('http://localhost:5000/post', {
+                                        const response = await axios.get('https://devcenter-kofh.onrender.com/post', {
                                             headers: { Authorization: `Bearer ${token}` },
                                         });
 

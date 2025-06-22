@@ -65,14 +65,14 @@ const handlePost = async () => {
     }
 
     // Step 1: Create documentation
-    const response = await axios.post("http://localhost:5000/documentation", payload, {
+    const response = await axios.post("https://devcenter-kofh.onrender.com/documentation", payload, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     if (response.status === 201) {
       // Step 2: Auto-create related post
       await axios.post(
-        "http://localhost:5000/auto-create-post",
+        "https://devcenter-kofh.onrender.com/auto-create-post",
         {
           resource_name: payload.resource_name,
           resource_version: payload.resource_version,
@@ -115,7 +115,7 @@ const handlePost = async () => {
       setResourceName(null);
       setResourceVersion(null);
       axios
-        .get("http://localhost:5000/documentation/names", {
+        .get("https://devcenter-kofh.onrender.com/documentation/names", {
           params: { resourceType: selectedResourceType },
         })
         .then((res) => setResourceNameOptions(res.data))
@@ -131,7 +131,7 @@ const handlePost = async () => {
       selectedResourceType
     ) {
       axios
-        .get("http://localhost:5000/documentation/details", {
+        .get("https://devcenter-kofh.onrender.com/documentation/details", {
           params: {
             resourceType: selectedResourceType,
             resourceName: selectedResourceName,

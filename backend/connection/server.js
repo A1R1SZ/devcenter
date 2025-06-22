@@ -16,7 +16,7 @@ app.use(cors({
   allowedHeaders: ["Authorization", "Content-Type"]
 }));
 app.use(express.json());
-app.listen(5000, () => console.log("✅ Server running on http://localhost:5000"));
+app.listen(5000, () => console.log("✅ Server running on https://devcenter-kofh.onrender.com"));
 
 const multer = require('multer');
 const path = require('path');

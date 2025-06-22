@@ -17,7 +17,7 @@ export const UserProvider = ({ children }) => {
         const decoded = jwtDecode(storedToken);
         if (decoded.userID) setUserID(decoded.userID);
 
-        fetch('http://localhost:5000/get-profile-info', {
+        fetch('https://devcenter-kofh.onrender.com/get-profile-info', {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },

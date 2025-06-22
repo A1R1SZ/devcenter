@@ -30,7 +30,7 @@ export default function CreateTagsButton() {
       if (selectedResourceType) {
         setResourceName(null);
         setResourceVersion(null);
-        axios.get("http://localhost:5000/documentation/names", {
+        axios.get("https://devcenter-kofh.onrender.com/documentation/names", {
           params: { resourceType: selectedResourceType }
         })
         .then(res => setResourceNameOptions(res.data))
@@ -41,7 +41,7 @@ export default function CreateTagsButton() {
     useEffect(() => {
       if (selectedResourceType && selectedResourceName) {
         setResourceVersion(null);
-        axios.get("http://localhost:5000/documentation/versions", {
+        axios.get("https://devcenter-kofh.onrender.com/documentation/versions", {
           params: {
             resourceType: selectedResourceType,
             resourceName: selectedResourceName
@@ -90,7 +90,7 @@ const handlePost = async () => {
     };
 
 
-    const response = await axios.post("http://localhost:5000/tag", payload, {
+    const response = await axios.post("https://devcenter-kofh.onrender.com/tag", payload, {
         headers: {
             Authorization: `Bearer ${token}`
         }

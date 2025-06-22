@@ -80,7 +80,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
     const token = localStorage.getItem('token');
 
     try {
-      await axios.post(`http://localhost:5000/post/${post.post_id}/analytics`, analyticFormData, {
+      await axios.post(`https://devcenter-kofh.onrender.com/post/${post.post_id}/analytics`, analyticFormData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Analytics submitted successfully");
@@ -99,7 +99,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   const checkAnalyticsStatus = async () => {
     const token = localStorage.getItem('token');
     try {
-      const response = await axios.get(`http://localhost:5000/post/${post.post_id}/analytics/check`, {
+      const response = await axios.get(`https://devcenter-kofh.onrender.com/post/${post.post_id}/analytics/check`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setHasSubmittedAnalytics(response.data.hasSubmitted);
@@ -133,7 +133,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   const fetchSinglePost = async () => {
     const token = localStorage.getItem('token');
     try {
-      const response = await axios.get(`http://localhost:5000/post/${post.post_id}`, {
+      const response = await axios.get(`https://devcenter-kofh.onrender.com/post/${post.post_id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -175,7 +175,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
     if (input.trim()) {
       const token = localStorage.getItem('token');
       try {
-        await axios.post(`http://localhost:5000/post/${post.post_id}/comment`, {
+        await axios.post(`https://devcenter-kofh.onrender.com/post/${post.post_id}/comment`, {
           comment: input,
         }, {
           headers: {
@@ -196,7 +196,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
     const isExternalUrl = post.post_graphic.startsWith("http");
     const imageSrc = isExternalUrl
       ? post.post_graphic
-      : `http://localhost:5000/uploads/${post.post_graphic}`;
+      : `https://devcenter-kofh.onrender.com/uploads/${post.post_graphic}`;
 
     if (imageSrc.includes("youtube.com") || imageSrc.includes("youtu.be")) {
       const embedUrl = getYouTubeEmbedUrl(imageSrc);

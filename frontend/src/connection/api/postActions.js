@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'https://devcenter-kofh.onrender.com';
 
 export const likePost = async (postId, token) => {
   return axios.post(`${BASE_URL}/post/${postId}/like`, {}, {
