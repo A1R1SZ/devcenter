@@ -18,6 +18,8 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { likePost, bookmarkPost } from '../connection/api/postActions';
 import axios from "axios";
+import AnalyticForm from './analyticForm';
+
 
 function getYouTubeEmbedUrl(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -60,6 +62,51 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   const [isBookmarkActive, setIsBookmarkActive] = useState(isBookmarked);
   const [likes, setLikes] = useState(Number(favouriteCounter) || 0);
   const [bookmarks, setBookmarks] = useState(Number(bookmarkCounter) || 0);
+  const [hasSubmittedAnalytics, setHasSubmittedAnalytics] = useState(false);
+  
+
+
+  const [analyticFormData, setAnalyticFormData] = useState({
+    summary: '',
+    difficulty: '',
+    readTime: '',
+    usefulness: 3,
+    recommendation: 3,
+    clarity:3,
+  });
+
+
+  const handleAnalyticSubmit = async () => {
+    const token = localStorage.getItem('token');
+
+    try {
+      await axios.post(`http://localhost:5000/post/${post.post_id}/analytics`, analyticFormData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Analytics submitted successfully");
+      setHasSubmittedAnalytics(true); // Disable the form
+    } catch (err) {
+      if (err.response?.status === 409) {
+        alert("You have already submitted analytics for this documentation.");
+        setHasSubmittedAnalytics(true);
+      } else {
+        console.error("Error submitting analytics:", err);
+        alert("Failed to submit analytics.");
+      }
+    }
+  };
+
+  const checkAnalyticsStatus = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`http://localhost:5000/post/${post.post_id}/analytics/check`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setHasSubmittedAnalytics(response.data.hasSubmitted);
+    } catch (err) {
+      console.error("Error checking analytics submission:", err);
+    }
+  };
 
   const handleLike = async (e) => {
     e.stopPropagation();
@@ -107,6 +154,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   useEffect(() => {
     if (post?.post_id) {
       fetchSinglePost();
+      checkAnalyticsStatus();  // 👈 call this as well
     }
   }, [post?.post_id]);
 
@@ -202,6 +250,14 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   return (
     <Modal open={Boolean(post)} onClose={onClose}>
       <Box>
+      {!hasSubmittedAnalytics && (
+        <AnalyticForm
+          formData={analyticFormData}
+          setFormData={setAnalyticFormData}
+          handleSubmit={handleAnalyticSubmit}
+          disabled={hasSubmittedAnalytics}
+        />
+        )}
         {openForum && (
           <Accordion
             sx={{

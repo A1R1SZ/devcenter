@@ -7,11 +7,14 @@ import {
   Autocomplete,
   Snackbar,
   Typography,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { usePostContext } from "../data/contextData";
 import { resourceName, resourceType } from "../data/generalData";
 import axios from "axios";
 import { UserContext } from "../contexts/UserContext";
+import MarkdownEditor from "./MarkdownEditor";
 
 
 export default function CreateContentButton() {
@@ -30,6 +33,7 @@ export default function CreateContentButton() {
   const [selectedResourceTag,setResourceTag] = useState(null);
   const [contentType,setContentType] = useState("Unofficial")
   const [newResourceTitle,setNewResourceTitle] = useState(null);
+  const [newResourceDesc,setNewResourceDesc] = useState(null);
   const [newResourceContent,setNewResourceContent] = useState(null);
   const [newResourceImg,setNewResourceImg] = useState(null);
   const [tags, setTags] = useState([]);
@@ -49,6 +53,9 @@ export default function CreateContentButton() {
   });
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  const [mediaInputType, setMediaInputType] = useState("upload");
+  const [mediaUrl, setMediaUrl] = useState("");
 
     useEffect(() => {
       if (selectedResourceType) {
@@ -109,6 +116,7 @@ export default function CreateContentButton() {
       selectedVersion: selectedResourceVersion,
       newResourceTitle: "",
       newResourceContent: "",
+      newResourceDesc:"",
       imageName: "",
       imagePreview: "",
     });
@@ -149,9 +157,12 @@ const handlePost = async () => {
     formDataToSend.append("selectedTag", selectedResourceTag?.resource_tag_name || selectedResourceTag);
     formDataToSend.append("resource_title", newResourceTitle);
     formDataToSend.append("resource_content", newResourceContent);
+    formDataToSend.append("resource_desc",newResourceDesc)
 
-    if (newResourceImg) {
+    if (mediaInputType === "upload" && newResourceImg) {
       formDataToSend.append("resource_graphic", newResourceImg);
+    } else if (mediaInputType === "url" && mediaUrl) {
+      formDataToSend.append("resource_graphic_url", mediaUrl);
     }
 
     const response = await axios.post("http://localhost:5000/create-post", formDataToSend, {
@@ -162,7 +173,7 @@ const handlePost = async () => {
     });
 
     if (response.status === 201) {
-      dispatch({ type: "ADD_POST", payload: response.data }); // Assuming backend returns created post
+      dispatch({ type: "ADD_POST", payload: response.data });
       setSnackbarOpen(true);
       handleClose();
       createButtonRef.current?.focus();
@@ -399,51 +410,93 @@ const handlePost = async () => {
       Finalize Documentation
     </Typography>
 
-    {/* Image Upload Area */}
+<Box>
+  <Tabs
+    value={mediaInputType}
+    onChange={(e, newValue) => setMediaInputType(newValue)}
+    centered
+    textColor="inherit"
+    TabIndicatorProps={{ style: { display: "none" } }}
+    sx={{
+      mt:1,
+      mb:2,
+      borderRadius: "8px",
+      display: "flex",
+      justifyContent: "center",
+      '& .MuiTab-root': {
+        color: "white",
+        mx: 1,
+        borderRadius: "6px",
+        textTransform: "none",
+        minWidth: "120px",
+        transition: "0.3s",
+      },
+      '& .Mui-selected': {
+        bgcolor: "#2196f3", // selected tab color
+        fontWeight: "bold",
+      },
+    }}
+  >
+    <Tab label="Upload Media (Direct)" value="upload" />
+    <Tab label="Upload Media (URL)" value="url" />
+  </Tabs>
+
+  {/* Upload File Input */}
+  {mediaInputType === "upload" && (
     <Box
       onDrop={handleDragDrop}
       onDragOver={(e) => e.preventDefault()}
       sx={{
-        backgroundColor: newResourceTitle ? "#393636" : "#2e2e2e",
-        border: "2px dashed #aaa",
-        p: 3,
-        textAlign: "center",
+        border: "2px dashed #ccc",
         borderRadius: 2,
-        cursor: newResourceTitle ? "pointer" : "not-allowed",
+        p: 2,
+        textAlign: "center",
+        cursor: "pointer",
+        color: "#ccc",
+        bgcolor: "#1e1e1e"
       }}
-      onClick={() => newResourceTitle && fileInputRef.current.click()}
+      onClick={() => fileInputRef.current?.click()}
     >
-      {formData.imagePreview ? (
-        <img
-          src={formData.imagePreview}
-          alt="Preview"
-          style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: 8 }}
-        />
-      ) : (
-        <>
-          <Typography variant="body1" gutterBottom>
-            {newResourceTitle
-              ? "Drag & Drop or Click to Upload Logo"
-              : "Enter a title to enable logo upload"}
-          </Typography>
-          {newResourceTitle && (
-            <Button variant="outlined" size="small">
-              Browse
-            </Button>
-          )}
-        </>
-      )}
+      <Typography>Click or drag & drop to upload an image</Typography>
       <input
-        type="file"
-        disabled={!newResourceTitle}
-        accept="image/*"
         ref={fileInputRef}
-        style={{ display: "none" }}
+        type="file"
+        accept="image/*"
+        hidden
         onChange={handleImageChange}
       />
+      {formData.imagePreview && (
+        <Box mt={2}>
+          <img
+            src={formData.imagePreview}
+            alt="Preview"
+            style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: 8 }}
+          />
+        </Box>
+      )}
     </Box>
+  )}
 
-    {/* Title Input */}
+  {/* URL Input */}
+  {mediaInputType === "url" && (
+    <TextField
+      fullWidth
+      variant="filled"
+      label="Enter Media URL"
+      value={mediaUrl}
+      onChange={(e) => setMediaUrl(e.target.value)}
+      sx={{
+        bgcolor: "#393636",
+        mt: 1,
+        input: { color: "white" },
+        label: { color: "whitesmoke" },
+        "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+      }}
+    />
+  )}
+</Box>
+
+
     <TextField
       fullWidth
       label="Content Title"
@@ -458,25 +511,23 @@ const handlePost = async () => {
         "& .MuiInputLabel-root": { color: "whitesmoke" },
       }}
     />
-
-    {/* Content Input */}
     <TextField
       fullWidth
+      label="Content Description"
       multiline
-      rows={5}
-      label="Content Details"
-      value={newResourceContent}
-      onChange={(e) => setNewResourceContent(e.target.value)}
-      disabled={!newResourceTitle}
+      minRows={5}
+      value={newResourceDesc}
+      onChange={(e) => setNewResourceDesc(e.target.value)}
+      disabled={!selectedResourceVersion}
       variant="filled"
       sx={{
-        backgroundColor: newResourceTitle ? "#393636" : "#2e2e2e",
+        backgroundColor: selectedResourceVersion ? "#393636" : "#2e2e2e",
         borderRadius: 1,
         "& .MuiInputBase-input": { color: "white" },
         "& .MuiInputLabel-root": { color: "whitesmoke" },
       }}
     />
-
+    <MarkdownEditor value={newResourceContent} onChange={(val) => setNewResourceContent(val)} />
     {/* Post Button */}
     <Button
       variant="contained"

@@ -35,7 +35,8 @@ export default function CatNavbar({ value, onChange }) {
           TabIndicatorProps={{ style: { display: 'none' } }}
         >
           <Tab label="Official Update" sx={tabStyles(0)} />
-          <Tab label="Community Post" sx={tabStyles(1)} />
+          <Tab label="Following" sx={tabStyles(1)}/>
+          <Tab label="Community Post" sx={tabStyles(2)} />
         </Tabs>
       </AppBar>
     </Box>

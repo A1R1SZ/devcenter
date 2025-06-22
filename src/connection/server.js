@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const pool = require("./database");
 const authenticateToken = require("./authMiddleware");
+const analyticsRoutes = require('./routes/analyticsRoutes');
+
 require("dotenv").config();
 console.log("JWT Secret:", process.env.JWT_SECRET); 
 
@@ -50,6 +52,7 @@ app.post('/upload-file', upload.single('file'), (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // Registration route
 app.post("/register", async (req, res) => {
@@ -217,6 +220,7 @@ app.post('/documentation',authenticateToken, async (req, res) => {
       resource_type,
       resource_title,
       resource_content,
+      resource_desc,
     } = req.body;
 
     const resource_author = req.user.userId;
@@ -248,25 +252,34 @@ app.post('/documentation',authenticateToken, async (req, res) => {
     }
 
     // Proceed with insertion
-    await pool.query(
-      `INSERT INTO documentation (
-        resource_type, 
-        resource_name, 
-        resource_version, 
-        resource_created_at, 
-        resource_title, 
-        resource_content, 
-        resource_author
-      ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5, $6)`,
+    // Insert the documentation
+    const docResult = await pool.query(
+      `INSERT INTO documentation 
+      (resource_name, resource_version, resource_type, resource_title, resource_content, resource_desc, resource_author) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
       [
-        resource_type,
         resource_name,
         resource_version,
+        resource_type,
         resource_title,
         resource_content,
-        resource_author
+        resource_desc,
+        resource_author,
       ]
     );
+
+    const documentationId = docResult.rows[0].id;
+
+    // Automatically insert tags
+    const defaultTags = ['bugs', 'fixes', 'updates', 'tutorials', 'tips/trick'];
+
+    for (const tag of defaultTags) {
+      await pool.query(
+        `INSERT INTO tag (documentation_id, resource_tag_name, resource_tag_author)
+         VALUES ($1, $2, $3)`,
+        [documentationId, tag, resource_author]
+      );
+    }
 
     res.status(201).json({ message: "Documentation created successfully" });
   } catch (err) {
@@ -630,6 +643,7 @@ app.get('/post', authenticateToken, async (req, res) => {
         devusers.username AS author_username, 
         documentation.resource_name AS resource_title,
         documentation.resource_version AS resource_version,
+        documentation.resource_desc AS resource_desc,
         color.resource_color,
 
         -- 💡 Count total likes/bookmarks per post
@@ -669,7 +683,8 @@ app.get('/post', authenticateToken, async (req, res) => {
         tag.resource_tag_name, 
         devusers.username, 
         documentation.resource_name, 
-        documentation.resource_version, 
+        documentation.resource_version,
+        documentation.resource_desc, 
         color.resource_color
 
       ORDER BY post.post_created_at DESC;
@@ -864,6 +879,7 @@ app.post('/create-post', authenticateToken, upload.single('resource_graphic'), a
     selectedTag,
     resource_title,
     resource_content,
+    resource_desc,
   } = req.body;
 
   if (!token) {
@@ -903,8 +919,8 @@ app.post('/create-post', authenticateToken, upload.single('resource_graphic'), a
     const result = await pool.query(
       `INSERT INTO post (
         post_type,post_tag, post_title, post_content, post_author,
-        post_created_at, post_graphic, post_resource
-      ) VALUES ($1, $2, $3, $4,$5, NOW(), $6,$7) RETURNING post_id`,
+        post_created_at, post_graphic, post_resource,post_desc
+      ) VALUES ($1, $2, $3, $4,$5, NOW(), $6,$7,$8) RETURNING post_id`,
       [
         resourceType,
         tagId,
@@ -912,7 +928,8 @@ app.post('/create-post', authenticateToken, upload.single('resource_graphic'), a
         resource_content,
         resource_author,
         req.file ? req.file.filename : null, // optionally: `/uploads/${req.file.filename}`
-        documentationId
+        documentationId,
+        resource_desc,
       ]
     );
 
@@ -926,6 +943,62 @@ app.post('/create-post', authenticateToken, upload.single('resource_graphic'), a
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+app.post('/auto-create-post', authenticateToken, async (req, res) => {
+  const { resource_type, resource_title, resource_content, resource_name, resource_version,resource_desc } = req.body;
+  const userId = req.user.userId;
+
+  try {
+    // 1. Find documentation
+    const docResult = await pool.query(
+      `SELECT id FROM documentation WHERE resource_name = $1 AND resource_version = $2`,
+      [resource_name, resource_version]
+    );
+
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Documentation not found' });
+    }
+
+    const doc = docResult.rows[0];
+
+    // 2. Get tag id
+    const tagResult = await pool.query(
+      `SELECT tag_id FROM tag WHERE resource_tag_name = 'updates' AND documentation_id = $1`,
+      [doc.id]
+    );
+
+
+    if (tagResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Tag not found for documentation' });
+    }
+
+    const tagId = tagResult.rows[0].tag_id;
+
+    // 3. Insert post
+    const postResult = await pool.query(
+      `INSERT INTO post (
+        post_type, post_tag, post_title, post_content, post_author,
+        post_created_at, post_graphic, post_resource
+      ) VALUES ($1, $2, $3, $4, $5, NOW(), NULL, $6,$7,$) RETURNING post_id`,
+      [
+        resource_type,
+        tagId,
+        resource_title,
+        resource_content,
+        userId,
+        doc.id,
+        resource_content.slice(0, 200),
+      ]
+    );
+
+    res.status(201).json({ message: "Auto-post created", postId: postResult.rows[0].post_id });
+
+  } catch (err) {
+    console.error("Error in auto-create-post:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // DELETE /post/:id
 app.delete('/post/:id', authenticateToken, async (req, res) => {
@@ -1105,6 +1178,296 @@ app.get('/search', authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error during search" });
   }
 });
+
+app.get('/bookmarks', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        post.*, 
+        tag.resource_tag_name, 
+        devusers.username AS author_username, 
+        documentation.resource_name AS resource_title,
+        documentation.resource_version AS resource_version,
+        color.resource_color,
+        documentation.resource_desc,
+        TRUE AS is_bookmarked,
+        EXISTS (
+          SELECT 1 FROM post_like WHERE post_like.post_id = post.post_id AND post_like.user_id = $1
+        ) AS is_liked,
+        (
+          SELECT COUNT(*) FROM post_like WHERE post_like.post_id = post.post_id
+        ) AS post_like_count,
+        (
+          SELECT COUNT(*) FROM post_bookmark WHERE post_bookmark.post_id = post.post_id
+        ) AS post_bookmark_count
+      FROM post
+      JOIN post_bookmark ON post.post_id = post_bookmark.post_id
+      JOIN tag ON post.post_tag = tag.tag_id
+      JOIN devusers ON post.post_author = devusers.id
+      JOIN documentation ON post.post_resource = documentation.id
+      LEFT JOIN color ON documentation.resource_name = color.resource_name
+      WHERE post_bookmark.user_id = $1
+      ORDER BY post.post_created_at DESC
+      `,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch Bookmarked Posts Error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.use('/api/analytics', analyticsRoutes);
+
+app.get("/check-follow-status", authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { resourceName, resourceVersion } = req.query;
+
+  try {
+    const docResult = await pool.query(
+      "SELECT id FROM documentation WHERE resource_name = $1 AND resource_version = $2",
+      [resourceName, resourceVersion]
+    );
+
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ message: "Documentation not found" });
+    }
+
+    const resourceId = docResult.rows[0].id;
+
+    const followResult = await pool.query(
+      "SELECT * FROM resource_following WHERE user_id = $1 AND resource_id = $2",
+      [userId, resourceId]
+    );
+
+    res.status(200).json({ isFollowing: followResult.rows.length > 0 });
+  } catch (err) {
+    console.error("Check follow status error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/follow-resource", authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { selectedResources, selectedVersion } = req.body;
+
+  try {
+    // Get resource ID
+    const docResult = await pool.query(
+      "SELECT id FROM documentation WHERE resource_name = $1 AND resource_version = $2",
+      [selectedResources, selectedVersion]
+    );
+
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ message: "Resource not found" });
+    }
+
+    const resourceId = docResult.rows[0].id;
+
+    // Check if already following
+    const followCheck = await pool.query(
+      "SELECT * FROM resource_following WHERE user_id = $1 AND resource_id = $2",
+      [userId, resourceId]
+    );
+
+    if (followCheck.rows.length > 0) {
+      // ❌ Already following → remove
+      await pool.query(
+        "DELETE FROM resource_following WHERE user_id = $1 AND resource_id = $2",
+        [userId, resourceId]
+      );
+
+      return res.status(200).json({ followed: false, message: "Unfollowed" });
+    } else {
+      // ✅ Not following → insert
+      await pool.query(
+        "INSERT INTO resource_following (user_id, resource_id) VALUES ($1, $2)",
+        [userId, resourceId]
+      );
+
+      return res.status(200).json({ followed: true, message: "Followed" });
+    }
+
+  } catch (err) {
+    console.error("Toggle follow failed:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/following-resources-posts", authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        p.*, 
+        u.username AS author_username, 
+        d.resource_name AS resource_title, 
+        d.resource_desc, 
+        d.resource_version, 
+        c.resource_color, 
+        t.resource_tag_name
+      FROM post p
+      JOIN devusers u ON u.id = p.post_author
+      JOIN documentation d ON d.id = p.post_resource
+      JOIN resource_following rf ON rf.resource_id = d.id
+      LEFT JOIN tag t ON p.post_tag = t.tag_id
+      LEFT JOIN color c ON d.resource_name = c.resource_name
+      WHERE rf.user_id = $1
+      ORDER BY p.post_created_at DESC
+    `, [userId]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Failed to fetch followed posts:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/post/:postId/analytics", authenticateToken, async (req, res) => {
+  const { postId } = req.params;
+  const userId = req.user.userId; // Adjust this if your middleware uses user_id
+  const { usefulness, recommendation, clarity } = req.body;
+
+  if (![usefulness, recommendation, clarity].every(r => r >= 1 && r <= 5)) {
+    return res.status(400).json({ error: "All ratings must be between 1 and 5." });
+  }
+
+  try {
+    // Corrected: post_resource is the documentation ID
+    const docQuery = await pool.query(
+      `SELECT post_resource FROM post WHERE post_id = $1`,
+      [postId]
+    );
+
+    if (docQuery.rows.length === 0) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const documentationId = docQuery.rows[0].post_resource;
+
+    // Check for existing analytics submission
+    const existingCheck = await pool.query(
+      `SELECT id FROM analytics WHERE user_id = $1 AND documentation_id = $2`,
+      [userId, documentationId]
+    );
+
+    if (existingCheck.rows.length > 0) {
+      return res.status(409).json({
+        error: "You have already submitted analytics for this documentation.",
+      });
+    }
+
+    // Insert analytics
+    await pool.query(
+      `INSERT INTO analytics (documentation_id, user_id, usefulness_rating, recommendation_rating, clarity_rating)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [documentationId, userId, usefulness, recommendation, clarity]
+    );
+
+    res.status(201).json({ message: "Analytics submitted successfully" });
+  } catch (err) {
+    console.error("Error submitting analytics:", err.message);
+    res.status(500).json({ error: "Server error while submitting analytics" });
+  }
+});
+
+// GET /post/:postId/analytics/check
+app.get('/post/:postId/analytics/check', authenticateToken, async (req, res) => {
+  const { postId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    const docQuery = await pool.query(
+      `SELECT post_resource FROM post WHERE post_id = $1`,
+      [postId]
+    );
+
+    if (docQuery.rows.length === 0) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const documentationId = docQuery.rows[0].post_resource;
+
+    const checkQuery = await pool.query(
+      `SELECT id FROM analytics WHERE user_id = $1 AND documentation_id = $2`,
+      [userId, documentationId]
+    );
+
+    if (checkQuery.rows.length > 0) {
+      return res.json({ hasSubmitted: true });
+    } else {
+      return res.json({ hasSubmitted: false });
+    }
+
+  } catch (err) {
+    console.error("Error checking analytics status:", err.message);
+    res.status(500).json({ error: "Server error while checking analytics" });
+  }
+});
+
+app.get('/api/analytics/feedback', authenticateToken, async (req, res) => {
+  const { resourceName, resourceVersion } = req.query;
+  if (!resourceName || !resourceVersion) {
+    return res.status(400).json({ error: 'Missing parameters.' });
+  }
+  try {
+    const result = await pool.query(`
+      SELECT
+        AVG(usefulness_rating)::numeric(10,2) AS usefulness,
+        AVG(recommendation_rating)::numeric(10,2) AS recommendation,
+        AVG(clarity_rating)::numeric(10,2) AS clarity
+      FROM analytics a
+      JOIN documentation d ON a.documentation_id = d.id
+      WHERE d.resource_name = $1
+        AND d.resource_version = $2
+    `, [resourceName, resourceVersion]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Feedback analytics error:', err);
+    res.status(500).json({ error: 'Server error fetching feedback.' });
+  }
+});
+
+app.get("/posts-per-month", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        r.resource_name,
+        TO_CHAR(dp.created_at, 'YYYY-MM') AS month,
+        COUNT(*) AS post_count
+      FROM documentation_posts dp
+      JOIN resources r ON dp.resource_id = r.resource_id
+      GROUP BY r.resource_name, month
+      ORDER BY month ASC;
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching posts per month:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

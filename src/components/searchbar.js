@@ -106,7 +106,14 @@ export default function Searchbar() {
                 >
                   <ListItemText
                     primary={item.post_title || item.resource_name}
-                    secondary={`by @${item.author_username}`}
+                    secondary={
+                      <>
+                        {`by @${item.author_username}`}<br />
+                        {item.resource_name && item.resource_version
+                          ? `Resource: ${item.resource_name} v${item.resource_version}`
+                          : ''}
+                      </>
+                    }
                   />
                 </ListItem>
               ))}

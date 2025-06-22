@@ -33,10 +33,15 @@ function HomePage() {
     };
 
     const filteredContents = useMemo(() => {
-        return contents.filter(item =>
-            selectedTab === 0 ? item.post_type === 'Official' : item.post_type === 'Unofficial'
-        );
+        if (selectedTab === 0) {
+            return contents.filter(item => item.post_type === 'Official');
+        } else if (selectedTab === 1) {
+            return contents; // Already filtered by backend
+        } else {
+            return contents.filter(item => item.post_type === 'Unofficial');
+        }
     }, [contents, selectedTab]);
+
 
     const today = new Date().toLocaleDateString('en-GB', {
         day: '2-digit',
@@ -53,6 +58,32 @@ function HomePage() {
             setToken(storedToken);
         }
     }, [navigate]);
+
+    useEffect(() => {
+    if (!token) return;
+
+    const fetchContents = async () => {
+        try {
+            const endpoint =
+                selectedTab === 1
+                    ? 'http://localhost:5000/following-resources-posts'
+                    : 'http://localhost:5000/post';
+
+            const response = await axios.get(endpoint, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            setContents(response.data);
+        } catch (err) {
+            console.error('❌ Failed to fetch contents', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchContents();
+}, [token, selectedTab, refreshTrigger]);
+
 
     // ✅ Fetch user after token is ready
     useEffect(() => {
@@ -189,6 +220,8 @@ function HomePage() {
                                     postAuthorId={item.post_author}
                                     resource_tag={item.resource_tag_name}
                                     postDate={item.post_created_at}
+                                    resource_desc={item.resource_desc}
+                                    post_desc={item.post_desc}
                                 />
                             ))
                         )}

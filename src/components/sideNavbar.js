@@ -8,6 +8,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { AccountBox } from '@mui/icons-material';
+import { Bookmark } from '@mui/icons-material';
 
 const menuItems = [
   { text: 'HOMEPAGE', icon: <HomeIcon />, link: '/homepage' },
@@ -15,8 +16,10 @@ const menuItems = [
   { text: 'ANALYTICS', icon: <BarChartIcon />, link: '/analytics' },
   { text: 'DOCUMENTATION', icon: <DescriptionIcon />, link: '/documentation' },
   { text: 'PROFILE', icon: <AccountBox/>, link: '/profile' },
+  { text: 'BOOKMARK', icon: <Bookmark />, link: '/bookmark' },
   { text: 'SETTINGS', icon: <SettingsIcon />, link: '/settings' },
   { text: 'LOGOUT', icon: <ExitToAppIcon />, link: '/' },
+  
 ];
 
 export default function SideNavbar({ open, toggleSideNavbar }) {

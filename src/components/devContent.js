@@ -27,7 +27,6 @@ function getYouTubeEmbedUrl(url) {
 export default function DevContent({
   resource_name,
   title,
-  category,
   content,
   username,
   currentUserId,
@@ -46,6 +45,8 @@ export default function DevContent({
   postAuthorId,
   resource_tag,
   postDate,
+  resource_desc,
+  post_desc,
 }) {
   const [isCommentActive, setIsCommentActive] = useState(false);
   const [isFavoriteActive, setIsFavoriteActive] = useState(isLiked);
@@ -315,7 +316,7 @@ export default function DevContent({
             {title}
           </Typography>
           <Typography sx={{ color: 'grey', fontSize: '12px', mt: 1 }}>
-            {content}
+            {post_desc}
           </Typography>
           <SocialActions />
           {/* ✅ Display date at bottom right */}
@@ -358,13 +359,21 @@ export default function DevContent({
           },
         }}
       >
-        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-          Resource Details
-        </Typography>
-        <Typography variant="body2">
-          <strong>Name:</strong> {resource_name}<br />
-          <strong>Version:</strong> {resource_version || 'Unknown'}
-        </Typography>
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        <Typography variant="body2"><strong>Name:</strong>&nbsp;{resource_name}</Typography>
+        <Typography variant="body2"><strong>Version:</strong>&nbsp;{resource_version || 'Unknown'}</Typography>
+      </Box>
+      <Typography variant="body2"
+        sx={{
+          fontSize: 15,
+          color: "#bbbbbb",
+          marginTop: "10px",
+          maxWidth: "90%",
+          fontStyle: 'italic'
+        }}
+      >
+        {resource_desc}
+      </Typography>
       </Popover>
     </>
   );

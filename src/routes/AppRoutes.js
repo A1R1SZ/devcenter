@@ -10,6 +10,7 @@ import AnalyticsPage from '../pages/AnalyticsPage';
 import SettingsPage from '../pages/SettingsPage';
 import PrivateRoute from '../connection/privateRouter';
 import SearchResultsPage from '../pages/SearchResultsPage';
+import BookmarkPage from '../pages/BookmarkPage';
 
 function AppRoutes() {
   return (
@@ -35,6 +36,12 @@ function AppRoutes() {
             </PrivateRoute>
           } 
       />
+      <Route path="/bookmark" element={
+        <PrivateRoute>
+          <BookmarkPage />
+        </PrivateRoute>
+        }
+        />
       <Route
         path="/tags"
         element={

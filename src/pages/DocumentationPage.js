@@ -1,11 +1,16 @@
 import React, { useContext, useEffect, useState } from "react";
 import TopNavbar from "../components/topNavbar";
-import { Box, Card, Typography, Autocomplete, TextField, Button, Stack, Modal, TextareaAutosize } from "@mui/material";
-import { languageColors } from "../data/languageData"; // Import data
-import { resourceName, resourceType } from "../data/generalData";
+import { Box, Card, Typography, Autocomplete, TextField, Button, Stack, Modal } from "@mui/material";
+import { resourceType } from "../data/generalData";
 import axios from "axios";
 import DOMPurify from 'dompurify';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
+import rehypeHighlight from 'rehype-highlight';
 import { UserContext } from "../contexts/UserContext";
+import 'highlight.js/styles/github.css';
+import remarkBreaks from 'remark-breaks';
 
 
 function DocumentationPage() {
@@ -17,7 +22,11 @@ function DocumentationPage() {
   const [resourceVersionOptions, setResourceVersionOptions] = useState([]);
   const [resourceColor,setResourceColor] = useState(null);
   
+  
   const [documentationData, setDocumentationData] = useState([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  
 
   const { token } = useContext(UserContext);
 
@@ -74,6 +83,52 @@ function DocumentationPage() {
     }
   };
 
+  const handleFollow = async () => {
+    try {
+      const res = await axios.post('http://localhost:5000/follow-resource', {
+        selectedResources: selectedResourceName,
+        selectedVersion: selectedResourceVersion
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setIsFollowing(res.data.followed); // toggle UI state
+    } catch (err) {
+      console.error("Follow/unfollow failed:", err);
+      alert("Something went wrong while toggling follow.");
+    }
+  };
+
+  const checkFollowStatus = async () => {
+    if (!selectedResourceName || !selectedResourceVersion) return;
+
+    try {
+      const res = await axios.get('http://localhost:5000/check-follow-status', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          resourceName: selectedResourceName,
+          resourceVersion: selectedResourceVersion
+        }
+      });
+
+      setIsFollowing(res.data.isFollowing);
+    } catch (err) {
+      console.error("Error checking follow status:", err);
+      setIsFollowing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedResourceType && selectedResourceName && selectedResourceVersion) {
+      checkFollowStatus();
+    }
+  }, [selectedResourceType, selectedResourceName, selectedResourceVersion]);
+
+
   useEffect(() => {
     if (selectedResourceType) {
       setResourceName(null);
@@ -127,12 +182,20 @@ function DocumentationPage() {
       .then((res) => {
         console.log("Fetched data:", res.data); 
         setDocumentationData(res.data);
+
+        // ✅ Extract the first resource's description
+        if (res.data.length > 0) {
+          setResourceDesc(res.data[0].resource_desc || "No description available.");
+        } else {
+          setResourceDesc("No description available.");
+        }
       })
       .catch((err) => {
         console.error("Failed to fetch documentation:", err);
       });
     }
   }, [selectedResourceType, selectedResourceName, selectedResourceVersion]);
+
   
   
 
@@ -141,6 +204,7 @@ function DocumentationPage() {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [content, setContent] = useState("'Paste here'");
+  const [resourceDesc, setResourceDesc] = useState("");
   const [editedContent, setEditedContent] = useState(content);
 
   // Modal styles
@@ -308,6 +372,19 @@ function DocumentationPage() {
               {selectedResourceName && selectedResourceVersion && (
                 <Stack direction="row" spacing={1}>
                   <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleFollow}
+                    sx={{
+                      backgroundColor: isFollowing ? "#757575" : "#81c784",
+                      "&:hover": {
+                        backgroundColor: isFollowing ? "#616161" : "#66bb6a"
+                      }
+                    }}
+                  >
+                    {isFollowing ? "Unfollow" : "Follow"}
+                  </Button>
+                  <Button
                     variant="outlined"
                     size="small"
                     sx={{ color: "white", borderColor: "#64b5f6", "&:hover": { backgroundColor: "#42a5f5" } }}
@@ -335,12 +412,40 @@ function DocumentationPage() {
 
             {!isHidden && (
               <Card sx={{ backgroundColor: '#2A2828', color: 'white', padding: '20px', marginTop: '20px' }}>
+                {resourceDesc && (
+                  <Typography
+                    sx={{
+                      fontSize: 15,
+                      color: "#bbbbbb",
+                      marginTop: "10px",
+                      marginLeft: '10px',
+                      maxWidth: "90%",
+                      fontStyle: 'italic'
+                    }}
+                  >
+                    {resourceDesc}
+                  </Typography>
+                )}
                 {documentationData.map((doc) => (
-                  <Card key={doc.id} sx={{ mb: 2, p: 2, bgcolor: "#282828", color: "white" }}>
-                    <Typography
-                      sx={{ mt: 1 }}
-                      dangerouslySetInnerHTML={{
-                        __html: DOMPurify.sanitize(doc.resource_content),
+                  <Card sx={{ backgroundColor: '#2A2828', color: 'white', padding: '20px', marginTop: '20px', overflowY: 'auto', maxHeight: '800px' }}>
+                    <ReactMarkdown
+                      children={documentationData[0]?.resource_content || "No documentation available."}
+                      remarkPlugins={[remarkGfm, remarkBreaks]}
+                      rehypePlugins={[rehypeSanitize, rehypeHighlight]} 
+                      components={{
+                        h1: ({node, ...props}) => <Typography variant="h4" sx={{ color: 'white' }} gutterBottom {...props} />,
+                        h2: ({node, ...props}) => <Typography variant="h5" sx={{ color: 'white' }} gutterBottom {...props} />,
+                        p: ({node, ...props}) => <Typography sx={{ color: 'white' }} paragraph {...props} />,
+                        code: ({node, inline, className, children, ...props}) =>
+                          inline ? (
+                            <code style={{ backgroundColor: '#444', padding: '2px 4px', borderRadius: '4px' }} {...props}>
+                              {children}
+                            </code>
+                          ) : (
+                            <pre style={{ backgroundColor: '#333', padding: '10px', borderRadius: '5px', overflowX: 'auto' }} {...props}>
+                              <code>{children}</code>
+                            </pre>
+                          )
                       }}
                     />
                   </Card>

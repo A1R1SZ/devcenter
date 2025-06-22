@@ -17,11 +17,14 @@ import { resourceType } from "../data/generalData";
 import axios from "axios";
 import { UserContext } from "../contexts/UserContext";
 import { HexColorPicker } from "react-colorful";
+import MarkdownEditor from './MarkdownEditor';
+
 
 export default function CreateDocumentationButton() {
   const [selectedResourceType, setResourceType] = useState(null);
   const [selectedResourceName, setResourceName] = useState(null);
   const [selectedResourceVersion, setResourceVersion] = useState(null);
+  const [newResourceDesc,setNewResourceDesc] = useState("");
   const [newResourceTitle, setNewResourceTitle] = useState("");
   const [newResourceContent, setNewResourceContent] = useState("");
   const [resourceNameOptions, setResourceNameOptions] = useState([]);
@@ -29,6 +32,7 @@ export default function CreateDocumentationButton() {
 
   const [open, setOpen] = useState(false);
   const [stepModalOpen, setStepModalOpen] = useState(false);
+  const [finalModalOpen, setFinalModalOpen] = useState(false);
   const [resouceExistance, setResourceExistance] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -43,46 +47,58 @@ export default function CreateDocumentationButton() {
     resetFormData();
   };
 
-  const handlePost = async () => {
-    try {
-      const payload = {
-        resource_name: selectedResourceName,
-        resource_color:selectedColor,
-        resource_version: selectedResourceVersion,
-        resource_type: selectedResourceType,
-        resource_title: newResourceTitle,
-        resource_content: newResourceContent,
-      };
+const handlePost = async () => {
+  try {
+    const payload = {
+      resource_name: selectedResourceName,
+      resource_color: selectedColor,
+      resource_version: selectedResourceVersion,
+      resource_type: selectedResourceType,
+      resource_title: newResourceTitle,
+      resource_content: newResourceContent,
+      resource_desc: newResourceDesc,
+    };
 
-      if (Object.values(payload).some((val) => !val)) {
-        alert("Please fill in all fields.");
-        return;
-      }
+    if (Object.values(payload).some((val) => !val)) {
+      alert("Please fill in all fields.");
+      return;
+    }
 
-      const response = await axios.post(
-        "http://localhost:5000/documentation",
-        payload,
+    // Step 1: Create documentation
+    const response = await axios.post("http://localhost:5000/documentation", payload, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.status === 201) {
+      // Step 2: Auto-create related post
+      await axios.post(
+        "http://localhost:5000/auto-create-post",
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          resource_name: payload.resource_name,
+          resource_version: payload.resource_version,
+          resource_type: payload.resource_type,
+          resource_title: payload.resource_title,
+          resource_content: payload.resource_content,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (response.status === 201) {
-        dispatch({ type: "ADD_POST", payload });
-        setSnackbarOpen(true);
-        handleClose();
-        createButtonRef.current?.focus();
-      }
-    } catch (err) {
-      if (err.response) {
-        alert(`Error: ${err.response.data.message}`);
-      } else {
-        console.error("Error submitting documentation:", err);
-      }
+      dispatch({ type: "ADD_POST", payload });
+      setSnackbarOpen(true);
+      handleClose();
+      createButtonRef.current?.focus();
     }
-  };
+  } catch (err) {
+    if (err.response) {
+      alert(`Error: ${err.response.data.message}`);
+    } else {
+      console.error("Error submitting documentation/post:", err);
+    }
+  }
+};
+
 
   const resetFormData = () => {
     setResourceType(null);
@@ -91,6 +107,7 @@ export default function CreateDocumentationButton() {
     setNewResourceTitle("");
     setNewResourceContent("");
     setResourceExistance(null);
+    setNewResourceDesc("");
   };
 
   useEffect(() => {
@@ -352,7 +369,6 @@ export default function CreateDocumentationButton() {
               }}
             />
           </Stack>
-
           <Stack direction="row" spacing={3} sx={{ height: 320 }}>
             {!resouceExistance && (
               <Box
@@ -408,38 +424,19 @@ export default function CreateDocumentationButton() {
             <Stack spacing={2} sx={{ width: resouceExistance ? "100%" : "60%", height: "100%" }}>
               <TextField
                 disabled={!selectedResourceVersion}
-                value={newResourceTitle || ""}
-                onChange={(event) => setNewResourceTitle(event.target.value)}
-                label="Resource Title"
+                label="Resource Description"
+                placeholder="Prvoide brief description about the new Resource here"
+                value={newResourceDesc}
+                onChange={(e) => setNewResourceDesc(e.target.value)}
+                multiline
+                minRows={12}
+                fullWidth
                 variant="outlined"
                 sx={{
+                  mt: 2,
                   backgroundColor: selectedResourceVersion ? "#393636" : "#2e2e2e",
                   borderRadius: "5px",
                   "& .MuiInputBase-input": { color: "white" },
-                  "& .MuiInputLabel-root": { color: "whitesmoke" },
-                  "& .MuiInputLabel-root.Mui-focused": { color: "white" },
-                }}
-              />
-              <TextField
-                disabled={!newResourceTitle}
-                value={newResourceContent || ""}
-                onChange={(event) => setNewResourceContent(event.target.value)}
-                label="Resource Content"
-                variant="outlined"
-                multiline
-                rows={9}
-                sx={{
-                  flex: 1,
-                  minHeight: 200,
-                  borderRadius: "5px",
-                  "& .MuiInputBase-root": {
-                    backgroundColor: selectedResourceVersion ? "#393636" : "#2e2e2e",
-                    borderRadius: "5px",
-                  },
-                  "& .MuiInputBase-inputMultiline": {
-                    color: "white",
-                    backgroundColor: "transparent", // inherits from root
-                  },
                   "& .MuiInputLabel-root": { color: "whitesmoke" },
                   "& .MuiInputLabel-root.Mui-focused": { color: "white" },
                 }}
@@ -448,21 +445,87 @@ export default function CreateDocumentationButton() {
           </Stack>
 
           <Button
-            variant="outlined"
-            fullWidth
-            disabled={!newResourceContent}
-            sx={{
-              mt: 3,
-              color: "#ffffff",
-              borderColor: "#90caf9",
-              "&:hover": { borderColor: "#64b5f6" },
+            variant="contained"
+            sx={{ mt: 3 }}
+            disabled={
+              !selectedResourceType ||
+              !selectedResourceName ||
+              !selectedResourceVersion
+            }
+            onClick={() => {
+              setOpen(false);
+              setFinalModalOpen(true);
             }}
-            onClick={handlePost}
           >
-            Create Post
+            Continue
           </Button>
+
         </Box>
       </Modal>
+
+<Modal
+  open={finalModalOpen}
+  onClose={() => setFinalModalOpen(false)}
+  sx={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1300,
+    overflowY: "auto",
+  }}
+>
+  <Box
+    sx={{
+      bgcolor: "#2c2c2c",
+      color: "white",
+      borderRadius: 2,
+      boxShadow: 24,
+      p: 4,
+      width: "800px",
+    }}
+  >
+    <Typography variant="h6" mb={2}>
+      Final Step: Provide Title and Content
+    </Typography>
+
+    <TextField
+      fullWidth
+      label="Resource Title"
+      value={newResourceTitle}
+      onChange={(e) => setNewResourceTitle(e.target.value)}
+      variant="outlined"
+      sx={{
+        mb: 3,
+        backgroundColor: "#393636",
+        borderRadius: "5px",
+        "& .MuiInputBase-input": { color: "white" },
+        "& .MuiInputLabel-root": { color: "whitesmoke" },
+        "& .MuiInputLabel-root.Mui-focused": { color: "white" },
+      }}
+    />
+    <MarkdownEditor   value={newResourceContent} onChange={(val) => setNewResourceContent(val)} />
+      <Stack direction="row" justifyContent="flex-end" spacing={2}>
+        <Button
+          variant="outlined"
+          sx={{
+            color: "#ffffff",
+            borderColor: "#90caf9",
+            "&:hover": { borderColor: "#64b5f6" },
+          }}
+          onClick={() => {
+            setFinalModalOpen(false);
+            setOpen(true); // Go back if needed
+          }}
+        >
+          Back
+        </Button>
+        <Button variant="contained" onClick={handlePost}>
+          Submit
+        </Button>
+      </Stack>
+    </Box>
+  </Modal>
+
     </>
   );
 }
