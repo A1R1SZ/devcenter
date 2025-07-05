@@ -7,6 +7,7 @@ import axios from "axios";
 import { UserContext } from "../contexts/UserContext";
 
 export default function TagsPage() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [selectedResourceType, setResourceType] = useState(null);
   const [selectedResourceName, setResourceName] = useState(null);
   const [selectedResourceVersion, setResourceVersion] = useState(null);
@@ -22,7 +23,7 @@ export default function TagsPage() {
     if (selectedResourceType) {
       setResourceName(null);
       setResourceVersion(null);
-      axios.get("https://devcenter-kofh.onrender.com/documentation/names", {
+      axios.get(`${baseURL}/documentation/names`, {
         params: { resourceType: selectedResourceType }
       })
       .then(res => setResourceNameOptions(res.data))
@@ -33,7 +34,7 @@ export default function TagsPage() {
   useEffect(() => {
     if (selectedResourceType && selectedResourceName) {
       setResourceVersion(null);
-      axios.get("https://devcenter-kofh.onrender.com/documentation/versions", {
+      axios.get(`${baseURL}/documentation/versions`, {
         params: {
           resourceType: selectedResourceType,
           resourceName: selectedResourceName
@@ -46,7 +47,7 @@ export default function TagsPage() {
 
   useEffect(() => {
     if (selectedResourceName && selectedResourceVersion) {
-      axios.get("https://devcenter-kofh.onrender.com/tag-filter", {
+      axios.get(`${baseURL}/tag-filter`, {
         params: {
           resourceName: selectedResourceName,
           resourceVersion: selectedResourceVersion,
@@ -75,7 +76,7 @@ export default function TagsPage() {
     if (selectedTags.length === 0) return;
 
     try {
-      const response = await axios.delete("https://devcenter-kofh.onrender.com/delete-tag", {
+      const response = await axios.delete(`${baseURL}/delete-tag`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -106,7 +107,7 @@ export default function TagsPage() {
     const newName = editedContent.trim();
 
     try {
-      const response = await axios.put("https://devcenter-kofh.onrender.com/edit-tag", {
+      const response = await axios.put(`${baseURL}/edit-tag`, {
         selectedResources: selectedResourceName,
         selectedVersion: selectedResourceVersion,
         tagsToEdit: [{ oldName, newName }]

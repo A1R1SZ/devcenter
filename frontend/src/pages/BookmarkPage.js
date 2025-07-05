@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import DevContentModal from '../components/devContentModal';
 
 function BookmarkPage() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [bookmarkedContents, setBookmarkedContents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -38,7 +39,7 @@ function BookmarkPage() {
       if (!token) return;
 
       try {
-        const response = await axios.get("https://devcenter-kofh.onrender.com/get-profile-info", {
+        const response = await axios.get(`${baseURL}/get-profile-info`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser({ id: response.data.id, role: response.data.role });
@@ -55,7 +56,7 @@ function BookmarkPage() {
 
     const fetchBookmarked = async () => {
       try {
-        const response = await axios.get('https://devcenter-kofh.onrender.com/bookmarks', {
+        const response = await axios.get(`${baseURL}/bookmarks`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBookmarkedContents(response.data);
@@ -152,7 +153,7 @@ function BookmarkPage() {
                         item.post_graphic
                         ? item.post_graphic.startsWith("http")
                             ? item.post_graphic
-                            : `https://devcenter-kofh.onrender.com/uploads/${item.post_graphic}`
+                            : `${baseURL}/uploads/${item.post_graphic}`
                         : null
                     }
                   resource_color={item.resource_color}

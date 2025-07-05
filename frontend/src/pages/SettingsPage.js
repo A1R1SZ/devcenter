@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 
 
 function SettingsPage() {
-
+  const baseURL = process.env.REACT_APP_API_URL;
   const [profile, setProfile] = useState({ username: "", email: "" });
   const [password, setPassword] = useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -45,7 +45,7 @@ function SettingsPage() {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const response = await fetch("https://devcenter-kofh.onrender.com/get-profile-info", {
+        const response = await fetch(`${baseURL}/get-profile-info`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -70,7 +70,7 @@ function SettingsPage() {
     }
   
     try {
-      const response = await fetch("https://devcenter-kofh.onrender.com/delete-account", {
+      const response = await fetch(`${baseURL}/delete-account`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -112,7 +112,7 @@ function SettingsPage() {
     }
   
     try {
-      const response = await fetch("https://devcenter-kofh.onrender.com/update-profile", {
+      const response = await fetch(`${baseURL}/update-profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

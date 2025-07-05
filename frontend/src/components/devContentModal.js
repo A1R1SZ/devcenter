@@ -19,6 +19,9 @@ import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { likePost, bookmarkPost } from '../connection/api/postActions';
 import axios from "axios";
 import AnalyticForm from './analyticForm';
+import ReactMarkdown from 'react-markdown';
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/atom-one-dark.css';
 
 
 function getYouTubeEmbedUrl(url) {
@@ -56,7 +59,8 @@ const DevContentModal = ({
 }) => {
 
 const [openForum, setOpenForum] = useState(openForumInitially || false);
-  const [comments, setComments] = useState([]);
+const baseURL = process.env.REACT_APP_API_URL;  
+const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
   const [isFavoriteActive, setIsFavoriteActive] = useState(isLiked);
   const [isBookmarkActive, setIsBookmarkActive] = useState(isBookmarked);
@@ -80,7 +84,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
     const token = localStorage.getItem('token');
 
     try {
-      await axios.post(`https://devcenter-kofh.onrender.com/post/${post.post_id}/analytics`, analyticFormData, {
+      await axios.post(`${baseURL}/post/${post.post_id}/analytics`, analyticFormData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Analytics submitted successfully");
@@ -99,7 +103,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   const checkAnalyticsStatus = async () => {
     const token = localStorage.getItem('token');
     try {
-      const response = await axios.get(`https://devcenter-kofh.onrender.com/post/${post.post_id}/analytics/check`, {
+      const response = await axios.get(`${baseURL}/post/${post.post_id}/analytics/check`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setHasSubmittedAnalytics(response.data.hasSubmitted);
@@ -133,7 +137,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   const fetchSinglePost = async () => {
     const token = localStorage.getItem('token');
     try {
-      const response = await axios.get(`https://devcenter-kofh.onrender.com/post/${post.post_id}`, {
+      const response = await axios.get(`${baseURL}/post/${post.post_id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -175,7 +179,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
     if (input.trim()) {
       const token = localStorage.getItem('token');
       try {
-        await axios.post(`https://devcenter-kofh.onrender.com/post/${post.post_id}/comment`, {
+        await axios.post(`${baseURL}/post/${post.post_id}/comment`, {
           comment: input,
         }, {
           headers: {
@@ -183,7 +187,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
           },
         });
         setInput("");
-        fetchSinglePost(); // Refresh all comments from DB
+        fetchSinglePost();
       } catch (err) {
         console.error("Failed to add comment:", err);
       }
@@ -196,7 +200,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
     const isExternalUrl = post.post_graphic.startsWith("http");
     const imageSrc = isExternalUrl
       ? post.post_graphic
-      : `https://devcenter-kofh.onrender.com/uploads/${post.post_graphic}`;
+      : `${baseURL}/uploads/${post.post_graphic}`;
 
     if (imageSrc.includes("youtube.com") || imageSrc.includes("youtu.be")) {
       const embedUrl = getYouTubeEmbedUrl(imageSrc);
@@ -250,7 +254,7 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
   return (
     <Modal open={Boolean(post)} onClose={onClose}>
       <Box>
-      {!hasSubmittedAnalytics && (
+      {post.analytic_mode && (
         <AnalyticForm
           formData={analyticFormData}
           setFormData={setAnalyticFormData}
@@ -371,10 +375,33 @@ const [openForum, setOpenForum] = useState(openForumInitially || false);
               </IconButton>
             </Box>
             <Divider sx={{ my: 2, backgroundColor: "white" }} />
+                {console.log("test analytic",post.analytic_mode)}
+            <Box
+              sx={{
+                color: 'white',
+                mb: 3,
+                '& pre': {
+                  backgroundColor: '#1e1e1e',
+                  color: '#f8f8f2',
+                  borderRadius: 2,
+                  padding: 2,
+                  overflowX: 'auto',
+                  fontSize: '14px',
+                },
+                '& code': {
+                  backgroundColor: '#1e1e1e',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  color: '#f8f8f2',
+                },
+              }}
+            >
+              <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+                {post.post_content}
+              </ReactMarkdown>
+            </Box>
 
-            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 3, flexGrow: 1 }}>
-              {post.post_content}
-            </Typography>
           </Box>
         </Box>
       </Box>

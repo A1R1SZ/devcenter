@@ -34,6 +34,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 export default function Searchbar() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function Searchbar() {
     if (query.trim().length > 1) {
       const token = localStorage.getItem('token');
       axios
-        .get(`https://devcenter-kofh.onrender.com/search?q=${query}`, {
+        .get(`${baseURL}/search?q=${query}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setSuggestions(res.data.slice(0, 5)))

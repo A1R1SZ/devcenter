@@ -14,6 +14,7 @@ import axios from "axios";
 import { UserContext } from "../contexts/UserContext";
 
 export default function CreateTagsButton() {
+    const baseURL = process.env.REACT_APP_API_URL;
     const [open, setOpen] = useState(false);
 
     const [selectedResourceType,setResourceType] = useState(null);
@@ -30,7 +31,7 @@ export default function CreateTagsButton() {
       if (selectedResourceType) {
         setResourceName(null);
         setResourceVersion(null);
-        axios.get("https://devcenter-kofh.onrender.com/documentation/names", {
+        axios.get(`${baseURL}/documentation/names`, {
           params: { resourceType: selectedResourceType }
         })
         .then(res => setResourceNameOptions(res.data))
@@ -41,7 +42,7 @@ export default function CreateTagsButton() {
     useEffect(() => {
       if (selectedResourceType && selectedResourceName) {
         setResourceVersion(null);
-        axios.get("https://devcenter-kofh.onrender.com/documentation/versions", {
+        axios.get(`${baseURL}/documentation/versions`, {
           params: {
             resourceType: selectedResourceType,
             resourceName: selectedResourceName
@@ -90,7 +91,7 @@ const handlePost = async () => {
     };
 
 
-    const response = await axios.post("https://devcenter-kofh.onrender.com/tag", payload, {
+    const response = await axios.post(`${baseURL}/tag`, payload, {
         headers: {
             Authorization: `Bearer ${token}`
         }

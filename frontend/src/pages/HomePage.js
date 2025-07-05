@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import DevContentModal from '../components/devContentModal';
 
 function HomePage() {
+    const baseURL = process.env.REACT_APP_API_URL;
     const [contents, setContents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedPost, setSelectedPost] = useState(null);
@@ -66,8 +67,8 @@ function HomePage() {
         try {
             const endpoint =
                 selectedTab === 1
-                    ? 'https://devcenter-kofh.onrender.com/following-resources-posts'
-                    : 'https://devcenter-kofh.onrender.com/post';
+                    ? `${baseURL}/following-resources-posts`
+                    : `${baseURL}/post`;
 
             const response = await axios.get(endpoint, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -92,7 +93,7 @@ function HomePage() {
             if (!token) return;
 
             try {
-                const response = await axios.get("https://devcenter-kofh.onrender.com/get-profile-info", {
+                const response = await axios.get(`${baseURL}/get-profile-info`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
@@ -113,7 +114,7 @@ function HomePage() {
 
         const fetchContents = async () => {
             try {
-                const response = await axios.get('https://devcenter-kofh.onrender.com/post', {
+                const response = await axios.get(`${baseURL}/post`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setContents(response.data);
@@ -212,7 +213,7 @@ function HomePage() {
                                         item.post_graphic
                                             ? item.post_graphic.startsWith("http")
                                                 ? item.post_graphic
-                                                : `https://devcenter-kofh.onrender.com/uploads/${item.post_graphic}`
+                                                : `${baseURL}/uploads/${item.post_graphic}`
                                             : null
                                     }
                                     resource_color={item.resource_color}
@@ -230,7 +231,7 @@ function HomePage() {
                                 post={selectedPost}
                                 onClose={async () => {
                                     try {
-                                        const response = await axios.get('https://devcenter-kofh.onrender.com/post', {
+                                        const response = await axios.get(`${baseURL}/post`, {
                                             headers: { Authorization: `Bearer ${token}` },
                                         });
 

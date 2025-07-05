@@ -4,6 +4,7 @@ import { Button, Card, CardContent, Link, TextField, Typography } from '@mui/mat
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 function RegistrationPage() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +20,7 @@ function RegistrationPage() {
     setError('');
     
     try {
-      const response = await fetch("https://devcenter-kofh.onrender.com/register", {
+      const response = await fetch(`${baseURL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, password }),

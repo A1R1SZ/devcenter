@@ -14,6 +14,7 @@ import remarkBreaks from 'remark-breaks';
 
 
 function DocumentationPage() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [selectedResourceType,setResourceType] = useState(null);
   const [selectedResourceName,setResourceName] = useState(null)
   const [selectedResourceVersion,setResourceVersion] = useState(null);
@@ -32,7 +33,7 @@ function DocumentationPage() {
 
   const handleDelete = async () => {
     try {
-      const response = await axios.delete("https://devcenter-kofh.onrender.com/delete-documentation", {
+      const response = await axios.delete(`${baseURL}/delete-documentation`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -57,7 +58,7 @@ function DocumentationPage() {
   
   const handleSave = async () => {
     try {
-      const response = await axios.put("https://devcenter-kofh.onrender.com/edit-documentation", {
+      const response = await axios.put(`${baseURL}/edit-documentation`, {
         resourceContent: editedContent,
         resourceName: selectedResourceName,
         resourceVersion: selectedResourceVersion,
@@ -85,7 +86,7 @@ function DocumentationPage() {
 
   const handleFollow = async () => {
     try {
-      const res = await axios.post('https://devcenter-kofh.onrender.com/follow-resource', {
+      const res = await axios.post(`${baseURL}/follow-resource`, {
         selectedResources: selectedResourceName,
         selectedVersion: selectedResourceVersion
       }, {
@@ -105,7 +106,7 @@ function DocumentationPage() {
     if (!selectedResourceName || !selectedResourceVersion) return;
 
     try {
-      const res = await axios.get('https://devcenter-kofh.onrender.com/check-follow-status', {
+      const res = await axios.get(`${baseURL}/check-follow-status`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -133,7 +134,7 @@ function DocumentationPage() {
     if (selectedResourceType) {
       setResourceName(null);
       setResourceVersion(null);
-      axios.get("https://devcenter-kofh.onrender.com/documentation/names", {
+      axios.get(`${baseURL}/documentation/names`, {
         params: { resourceType: selectedResourceType }
       })
       .then(res => setResourceNameOptions(res.data))
@@ -144,7 +145,7 @@ function DocumentationPage() {
   useEffect(() => {
     if (selectedResourceType && selectedResourceName) {
       setResourceVersion(null);
-      axios.get("https://devcenter-kofh.onrender.com/documentation/versions", {
+      axios.get(`${baseURL}/documentation/versions`, {
         params: {
           resourceType: selectedResourceType,
           resourceName: selectedResourceName
@@ -153,7 +154,7 @@ function DocumentationPage() {
       .then(res => setResourceVersionOptions(res.data))
       .catch(err => console.error("Failed to fetch versions:", err));
 
-      axios.get("https://devcenter-kofh.onrender.com/color", {
+      axios.get(`${baseURL}/color`, {
         params: {
           resourceName: selectedResourceName
         }
@@ -172,7 +173,7 @@ function DocumentationPage() {
 
   useEffect(() => {
     if (selectedResourceType && selectedResourceName && selectedResourceVersion) {
-      axios.get("https://devcenter-kofh.onrender.com/documentation/filter", {
+      axios.get(`${baseURL}/documentation/filter`, {
         params: {
           resourceType: selectedResourceType,
           resourceName: selectedResourceName,

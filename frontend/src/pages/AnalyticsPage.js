@@ -26,6 +26,7 @@ import { resourceType } from "../data/generalData";
 import axios from "axios";
 
 function AnalyticsPage() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [selectedResourceType, setResourceType] = useState(null);
   const [selectedResourceName, setResourceName] = useState(null);
   const [selectedResourceVersion, setResourceVersion] = useState(null);
@@ -52,7 +53,7 @@ function AnalyticsPage() {
       setResourceName(null);
       setResourceVersion(null);
       axios
-        .get("https://devcenter-kofh.onrender.com/documentation/names", {
+        .get(`${baseURL}/documentation/names`, {
           params: { resourceType: selectedResourceType },
         })
         .then((res) => setResourceNameOptions(res.data))
@@ -61,7 +62,7 @@ function AnalyticsPage() {
   }, [selectedResourceType]);
 
   useEffect(() => {
-    axios.get("https://devcenter-kofh.onrender.com/api/analytics/posts-per-month")
+    axios.get(`${baseURL}/api/analytics/posts-per-month`)
       .then((res) => {
         setMonthlyPostData(res.data);
       })
@@ -75,7 +76,7 @@ function AnalyticsPage() {
     if (selectedResourceType && selectedResourceName) {
       setResourceVersion(null);
       axios
-        .get("https://devcenter-kofh.onrender.com/documentation/versions", {
+        .get(`${baseURL}/documentation/versions`, {
           params: {
             resourceType: selectedResourceType,
             resourceName: selectedResourceName,
@@ -85,7 +86,7 @@ function AnalyticsPage() {
         .catch((err) => console.error("Failed to fetch versions:", err));
 
       axios
-        .get("https://devcenter-kofh.onrender.com/color", {
+        .get(`${baseURL}/color`, {
           params: {
             resourceName: selectedResourceName,
           },
@@ -106,7 +107,7 @@ function AnalyticsPage() {
     const token = localStorage.getItem("token");
 
     // Summary
-    axios.get("https://devcenter-kofh.onrender.com/api/analytics/summary", {
+    axios.get(`${baseURL}/api/analytics/summary`, {
       params: {
         resourceName: selectedResourceName,
         resourceVersion: selectedResourceVersion,
@@ -122,7 +123,7 @@ function AnalyticsPage() {
     });
 
     // Tags
-    axios.get("https://devcenter-kofh.onrender.com/api/analytics/popular-tags", {
+    axios.get(`${baseURL}/api/analytics/popular-tags`, {
       params: {
         resourceName: selectedResourceName,
         resourceVersion: selectedResourceVersion,
@@ -137,7 +138,7 @@ function AnalyticsPage() {
     });
 
     // Feedback
-    axios.get("https://devcenter-kofh.onrender.com/api/analytics/feedback", {
+    axios.get(`${baseURL}/api/analytics/feedback`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -160,7 +161,7 @@ function AnalyticsPage() {
     });
 
     // Total posts (again – optional depending if you want to overwrite)
-    axios.get("https://devcenter-kofh.onrender.com/api/analytics/total-posts", {
+    axios.get(`${baseURL}/api/analytics/total-posts`, {
       params: {
         resourceName: selectedResourceName,
         resourceVersion: selectedResourceVersion,
@@ -173,7 +174,7 @@ function AnalyticsPage() {
       console.error("Failed to fetch total posts:", err);
       setTotalPosts(null);
     });
-    axios.get("https://devcenter-kofh.onrender.com/api/analytics/follower-count", {
+    axios.get(`${baseURL}/api/analytics/follower-count`, {
       params: {
         resourceName: selectedResourceName,
         resourceVersion: selectedResourceVersion,

@@ -47,6 +47,7 @@ export default function DevContent({
   postDate,
   resource_desc,
   post_desc,
+  post_analytic,
 }) {
   const [isCommentActive, setIsCommentActive] = useState(false);
   const [isFavoriteActive, setIsFavoriteActive] = useState(isLiked);
@@ -236,7 +237,7 @@ export default function DevContent({
         >
           {isAdmin && <MenuItem onClick={handleClose}>Remove Content</MenuItem>}
           {isOwner && [
-            <MenuItem key="edit" onClick={handleClose}>Edit</MenuItem>,
+            // <MenuItem key="edit" onClick={handleClose}>Edit</MenuItem>,
             <MenuItem
               key="delete"
               onClick={async (e) => {
@@ -256,8 +257,8 @@ export default function DevContent({
               Delete
             </MenuItem>
           ]}
-          <MenuItem onClick={handleClose}>Share</MenuItem>
-          <MenuItem onClick={handleClose}>Report</MenuItem>
+          {/* <MenuItem onClick={handleClose}>Share</MenuItem>
+          <MenuItem onClick={handleClose}>Report</MenuItem> */}
         </Menu>
 
         {hasMedia && (

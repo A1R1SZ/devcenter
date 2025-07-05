@@ -21,6 +21,7 @@ import MarkdownEditor from './MarkdownEditor';
 
 
 export default function CreateDocumentationButton() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [selectedResourceType, setResourceType] = useState(null);
   const [selectedResourceName, setResourceName] = useState(null);
   const [selectedResourceVersion, setResourceVersion] = useState(null);
@@ -39,7 +40,7 @@ export default function CreateDocumentationButton() {
   const createButtonRef = useRef(null);
   const { dispatch } = usePostContext();
   const { token } = useContext(UserContext);
-
+ 
   const isValidHex = /^#([0-9A-Fa-f]{3}){1,2}$/.test(selectedColor);
 
   const handleClose = () => {
@@ -65,20 +66,21 @@ const handlePost = async () => {
     }
 
     // Step 1: Create documentation
-    const response = await axios.post("https://devcenter-kofh.onrender.com/documentation", payload, {
+    const response = await axios.post(`${baseURL}/documentation`, payload, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     if (response.status === 201) {
       // Step 2: Auto-create related post
       await axios.post(
-        "https://devcenter-kofh.onrender.com/auto-create-post",
+        `${baseURL}/auto-create-post`,
         {
           resource_name: payload.resource_name,
           resource_version: payload.resource_version,
-          resource_type: payload.resource_type,
+          resource_type: "Official",
           resource_title: payload.resource_title,
           resource_content: payload.resource_content,
+          resource_desc:payload.resource_desc
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -115,7 +117,7 @@ const handlePost = async () => {
       setResourceName(null);
       setResourceVersion(null);
       axios
-        .get("https://devcenter-kofh.onrender.com/documentation/names", {
+        .get(`${baseURL}/documentation/names`, {
           params: { resourceType: selectedResourceType },
         })
         .then((res) => setResourceNameOptions(res.data))
@@ -131,7 +133,7 @@ const handlePost = async () => {
       selectedResourceType
     ) {
       axios
-        .get("https://devcenter-kofh.onrender.com/documentation/details", {
+        .get(`${baseURL}/documentation/details`, {
           params: {
             resourceType: selectedResourceType,
             resourceName: selectedResourceName,

@@ -1,9 +1,12 @@
 import './App.css';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Button, Card, CardContent, Link, TextField, Typography } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { UserContext } from '../contexts/UserContext';
 
 function App() {
+  const { refreshUser } = useContext(UserContext);
+  const baseURL = process.env.REACT_APP_API_URL;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -12,7 +15,7 @@ function App() {
   const handleLogin = async () => {
     setError('');
     try {
-      const response = await fetch("https://devcenter-kofh.onrender.com/login", {
+      const response = await fetch(`${baseURL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -22,6 +25,7 @@ function App() {
       if (response.ok) {
         localStorage.setItem("token", data.token); // Store JWT token
         localStorage.setItem("username", username);
+        refreshUser();
         navigate("/homepage"); // Redirect to homepage after login
       } else {
         setError(data.message || "Login failed");
@@ -58,13 +62,13 @@ function App() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <Typography>
+          {/* <Typography>
             Forget Password? <Link href='#'>Click here</Link>
           </Typography>
 
           <Typography>
             Sign in as <Link component={RouterLink} to='/homepage'>Guest</Link>
-          </Typography>
+          </Typography> */}
 
           <Button 
             sx={{ backgroundColor: 'darkgreen', color: 'white', marginTop: '10px', marginBottom: '10px', padding: '10px', width: 150 }} 

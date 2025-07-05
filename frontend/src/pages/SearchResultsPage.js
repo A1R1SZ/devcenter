@@ -12,6 +12,7 @@ function useQuery() {
 }
 
 export default function SearchResultsPage() {
+  const baseURL = process.env.REACT_APP_API_URL;
   const query = useQuery().get('q');
   const [results, setResults] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -23,6 +24,7 @@ export default function SearchResultsPage() {
   const navigate = useNavigate();
 
   const updatePostInList = (updatedPost) => {
+    const baseURL = process.env.REACT_APP_API_URL;
     setResults((prev) =>
       prev.map((post) =>
         Number(post.post_id) === Number(updatedPost.post_id)
@@ -47,7 +49,7 @@ export default function SearchResultsPage() {
       if (!token) return;
 
       try {
-        const response = await axios.get('https://devcenter-kofh.onrender.com/get-profile-info', {
+        const response = await axios.get(`${baseURL}/get-profile-info`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser({ id: response.data.id, role: response.data.role });
@@ -64,7 +66,7 @@ export default function SearchResultsPage() {
 
     const fetchResults = async () => {
       try {
-        const res = await axios.get(`https://devcenter-kofh.onrender.com/search?q=${query}`, {
+        const res = await axios.get(`${baseURL}/search?q=${query}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setResults(res.data);
@@ -160,7 +162,7 @@ export default function SearchResultsPage() {
                     post.post_graphic
                       ? post.post_graphic.startsWith('http')
                         ? post.post_graphic
-                        : `https://devcenter-kofh.onrender.com/uploads/${post.post_graphic}`
+                        : `${baseURL}/uploads/${post.post_graphic}`
                       : null
                   }
                   resource_color={post.resource_color}
@@ -177,7 +179,7 @@ export default function SearchResultsPage() {
                 post={selectedPost}
                 onClose={async () => {
                   try {
-                    const res = await axios.get(`https://devcenter-kofh.onrender.com/search?q=${query}`, {
+                    const res = await axios.get(`${baseURL}/search?q=${query}`, {
                       headers: { Authorization: `Bearer ${token}` },
                     });
 

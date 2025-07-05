@@ -41,7 +41,7 @@ export default function CreateContentButton() {
 
   const [open, setOpen] = useState(false);
 
-  
+  const baseURL = process.env.REACT_APP_API_URL;
   const [formData, setFormData] = useState({
     resourceType: selectedResourceType,
     selectedResources: selectedResourceName,
@@ -61,7 +61,7 @@ export default function CreateContentButton() {
       if (selectedResourceType) {
         setResourceName(null);
         setResourceVersion(null);
-        axios.get("https://devcenter-kofh.onrender.com/documentation/names", {
+        axios.get(`${baseURL}/documentation/names`, {
           params: { resourceType: selectedResourceType }
         })
         .then(res => setResourceNameOptions(res.data))
@@ -71,7 +71,7 @@ export default function CreateContentButton() {
     useEffect(() => {
       if (selectedResourceType && selectedResourceName) {
         setResourceVersion(null);
-        axios.get("https://devcenter-kofh.onrender.com/documentation/versions", {
+        axios.get(`${baseURL}/documentation/versions`, {
           params: {
             resourceType: selectedResourceType,
             resourceName: selectedResourceName
@@ -85,7 +85,7 @@ export default function CreateContentButton() {
 
     useEffect(() => {
     if (selectedResourceName && selectedResourceVersion) {
-      axios.get("https://devcenter-kofh.onrender.com/tag-filter", {
+      axios.get(`${baseURL}/tag-filter`, {
         params: {
           resourceName: selectedResourceName,
           resourceVersion: selectedResourceVersion,
@@ -165,7 +165,7 @@ const handlePost = async () => {
       formDataToSend.append("resource_graphic_url", mediaUrl);
     }
 
-    const response = await axios.post("https://devcenter-kofh.onrender.com/create-post", formDataToSend, {
+    const response = await axios.post(`${baseURL}/create-post`, formDataToSend, {
       headers: {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${token}`,

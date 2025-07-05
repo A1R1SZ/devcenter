@@ -4,10 +4,13 @@ import { jwtDecode } from 'jwt-decode';
 export const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
+  const baseURL = process.env.REACT_APP_API_URL;
   const [username, setUsername] = useState('');
   const [token, setToken] = useState(null);
   const [userID, setUserID] = useState(null);
   const [role, setRole] = useState(''); // ✅ Add role
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const refreshUser = () => setRefreshCounter(prev => prev + 1);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -17,7 +20,7 @@ export const UserProvider = ({ children }) => {
         const decoded = jwtDecode(storedToken);
         if (decoded.userID) setUserID(decoded.userID);
 
-        fetch('https://devcenter-kofh.onrender.com/get-profile-info', {
+        fetch(`${baseURL}/get-profile-info`, {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
@@ -38,7 +41,7 @@ export const UserProvider = ({ children }) => {
         console.error('Invalid token', err);
       }
     }
-  }, []);
+  }, [refreshCounter]);
 
   return (
     <UserContext.Provider
@@ -50,7 +53,8 @@ export const UserProvider = ({ children }) => {
         userID,
         setUserID,
         role,  
-        setRole
+        setRole,
+        refreshUser,
       }}
     >
       {children}

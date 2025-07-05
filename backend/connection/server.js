@@ -8,7 +8,8 @@ const authenticateToken = require("./authMiddleware");
 const analyticsRoutes = require('./routes/analyticsRoutes');
 
 require("dotenv").config();
-console.log("JWT Secret:", process.env.JWT_SECRET); 
+console.log("JWT Secret:", process.env.JWT_SECRET);
+const baseURL = process.env.REACT_APP_API_URL;
 
 const app = express();
 app.use(cors({
@@ -16,7 +17,7 @@ app.use(cors({
   allowedHeaders: ["Authorization", "Content-Type"]
 }));
 app.use(express.json());
-app.listen(5000, () => console.log("✅ Server running on https://devcenter-kofh.onrender.com"));
+app.listen(5000, () => console.log(`✅ Server running on ${baseURL}`));
 
 const multer = require('multer');
 const path = require('path');
@@ -709,6 +710,7 @@ app.get('/get-user-posts', authenticateToken, async (req, res) => {
         devusers.username AS author_username, 
         documentation.resource_name AS resource_title,
         documentation.resource_version AS resource_version,
+        documentation.resource_desc AS resource_desc,
         color.resource_color,
 
         COUNT(DISTINCT post_like.like_id) AS post_like_count,
@@ -722,6 +724,7 @@ app.get('/get-user-posts', authenticateToken, async (req, res) => {
         ) AS post_comment
 
       FROM post
+
       JOIN tag ON post.post_tag = tag.tag_id
       JOIN devusers ON post.post_author = devusers.id
       JOIN documentation ON post.post_resource = documentation.id
@@ -743,7 +746,8 @@ app.get('/get-user-posts', authenticateToken, async (req, res) => {
         tag.resource_tag_name, 
         devusers.username, 
         documentation.resource_name, 
-        documentation.resource_version, 
+        documentation.resource_version,
+        documentation.resource_desc,
         color.resource_color
 
       ORDER BY post.post_created_at DESC;
@@ -757,30 +761,64 @@ app.get('/get-user-posts', authenticateToken, async (req, res) => {
 });
 
 app.get('/get-user-posts/:id', authenticateToken, async (req, res) => {
-  const userId = req.params.id;
+  const targetUserId = req.params.id; // the profile you're viewing
+  const currentUserId = req.user.userId; // the authenticated user
 
   try {
     const result = await pool.query(`
       SELECT 
         post.*, 
-        devusers.username AS author_username,
-        tag.resource_tag_name,
+        tag.resource_tag_name, 
+        devusers.username AS author_username, 
         documentation.resource_name AS resource_title,
-        documentation.resource_version,
-        color.resource_color
+        documentation.resource_version AS resource_version,
+        documentation.resource_desc AS resource_desc,
+        color.resource_color,
+
+        COUNT(DISTINCT post_like.like_id) AS post_like_count,
+        COUNT(DISTINCT post_bookmark.bookmark_id) AS post_bookmark_count,
+
+        -- Replace COUNT logic with EXISTS for accuracy
+        EXISTS (
+          SELECT 1 FROM post_like ul 
+          WHERE ul.post_id = post.post_id AND ul.user_id = $1
+        ) AS is_liked,
+
+        EXISTS (
+          SELECT 1 FROM post_bookmark ub 
+          WHERE ub.post_id = post.post_id AND ub.user_id = $1
+        ) AS is_bookmarked,
+
+        (
+          SELECT COUNT(*) FROM post_comment WHERE post_comment.post_id = post.post_id
+        ) AS post_comment
 
       FROM post
-      JOIN devusers ON post.post_author = devusers.id
+
       JOIN tag ON post.post_tag = tag.tag_id
+      JOIN devusers ON post.post_author = devusers.id
       JOIN documentation ON post.post_resource = documentation.id
       LEFT JOIN color ON documentation.resource_name = color.resource_name
 
-      WHERE post.post_author = $1
-      ORDER BY post.post_created_at DESC
-    `, [userId]);
+      LEFT JOIN post_like ON post.post_id = post_like.post_id
+      LEFT JOIN post_bookmark ON post.post_id = post_bookmark.post_id
+
+      WHERE post.post_author = $2
+
+      GROUP BY 
+        post.post_id, 
+        tag.resource_tag_name, 
+        devusers.username, 
+        documentation.resource_name, 
+        documentation.resource_version,
+        documentation.resource_desc, 
+        color.resource_color
+
+      ORDER BY post.post_created_at DESC;
+    `, [currentUserId, targetUserId]);
 
     const usernameResult = await pool.query(
-      'SELECT username FROM devusers WHERE id = $1', [userId]
+      'SELECT username FROM devusers WHERE id = $1', [targetUserId]
     );
 
     res.json({
@@ -977,17 +1015,18 @@ app.post('/auto-create-post', authenticateToken, async (req, res) => {
     // 3. Insert post
     const postResult = await pool.query(
       `INSERT INTO post (
-        post_type, post_tag, post_title, post_content, post_author,
-        post_created_at, post_graphic, post_resource
-      ) VALUES ($1, $2, $3, $4, $5, NOW(), NULL, $6,$7,$) RETURNING post_id`,
+        post_type, post_title, post_tag, post_content, post_author,
+        post_created_at, post_graphic, post_resource, post_desc, analytic_mode
+      ) VALUES ($1, $2, $3, $4, $5, NOW(), NULL, $6, $7, $8) RETURNING post_id`,
       [
-        resource_type,
-        tagId,
-        resource_title,
-        resource_content,
-        userId,
-        doc.id,
-        resource_content.slice(0, 200),
+        resource_type,                    // $1
+        resource_title,                   // $2
+        tagId,                            // $3
+        resource_content,                 // $4
+        userId,                           // $5
+        doc.id,                           // $6
+        resource_desc,                    // $7
+        true                              // $8
       ]
     );
 

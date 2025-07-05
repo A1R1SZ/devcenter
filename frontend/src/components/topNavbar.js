@@ -56,9 +56,9 @@ export default function TopNavbar() {
             {isTagsPage && isAdmin && <CreateTagsButton />}
 
             <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto', gap: 1 }}>
-              <IconButton size="large" color="inherit">
+              {/* <IconButton size="large" color="inherit">
                 <NotificationsIcon />
-              </IconButton>
+              </IconButton> */}
               <Typography variant="subtitle1" sx={{ color: 'white' }}>
                 {username}
               </Typography>
